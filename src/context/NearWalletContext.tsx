@@ -110,13 +110,47 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
   };
 
   const connect = async (customAccountId?: string) => {
+    if (!customAccountId) {
+      connectMyNearWallet();
+      return;
+    }
+    const target = customAccountId.trim();
+    if (!isValidNearAccountId(target)) {
+      alert("Invalid NEAR account format. Example: alice.testnet");
+      return;
+    }
     setIsConnecting(true);
-    const target = (customAccountId || "paysure-treasury.testnet").trim();
-    setAccountId(target);
-    localStorage.setItem("paysure_near_account", target);
-    const liveBal = await queryLiveNearBalance(target);
-    setBalance(liveBal);
-    setIsConnecting(false);
+    try {
+      // Query real on-chain account data
+      const res = await fetch(NEAR_CONFIG.nodeUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "verify-exists",
+          method: "query",
+          params: {
+            request_type: "view_account",
+            finality: "final",
+            account_id: target,
+          },
+        }),
+      });
+      const d = await res.json();
+      if (d.error) {
+        alert(`Account '${target}' does not exist on NEAR Testnet! Please use an active testnet account or connect via MyNearWallet.`);
+        setIsConnecting(false);
+        return;
+      }
+      const liveBal = await queryLiveNearBalance(target);
+      setAccountId(target);
+      localStorage.setItem("paysure_near_account", target);
+      setBalance(liveBal);
+    } catch (e: any) {
+      alert(`Network error querying NEAR Testnet: ${e.message}`);
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   const connectMyNearWallet = () => {

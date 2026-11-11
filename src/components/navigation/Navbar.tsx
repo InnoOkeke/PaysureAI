@@ -117,20 +117,11 @@ export function Navbar() {
               <button
                 onClick={() => connectMyNearWallet()}
                 disabled={isConnecting}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-md shadow-brand-600/30 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-md shadow-brand-600/30 transition-all active:scale-[0.98] disabled:opacity-50"
                 title="Connect via official MyNearWallet testnet"
               >
                 <Wallet className="h-4 w-4" />
-                <span>MyNearWallet (Live)</span>
-              </button>
-
-              <button
-                onClick={() => connect()}
-                disabled={isConnecting}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-navy-900 hover:bg-navy-850 text-slate-300 border border-navy-800 transition-all"
-                title="Connect instant demo account"
-              >
-                <span>Demo Account</span>
+                <span>{isConnecting ? "Connecting MyNearWallet..." : "Connect NEAR Wallet"}</span>
               </button>
             </div>
           ) : (

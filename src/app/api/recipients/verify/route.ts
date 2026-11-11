@@ -21,7 +21,45 @@ export async function POST(req: NextRequest) {
 
     const cleanAddress = address.trim().toLowerCase();
 
-    // Query local database for counterparty record
+    // Query live NEAR blockchain RPC to verify if account actually exists on NEAR Testnet
+    let liveOnChain = false;
+    let onChainBalance = "0";
+    try {
+      const rpcRes = await fetch("https://rpc.testnet.near.org", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "verify-near-account",
+          method: "query",
+          params: {
+            request_type: "view_account",
+            finality: "final",
+            account_id: cleanAddress,
+          },
+        }),
+      });
+      const rpcData = await rpcRes.json();
+      if (rpcData.result?.amount) {
+        liveOnChain = true;
+        const yocto = BigInt(rpcData.result.amount);
+        const whole = yocto / BigInt("1000000000000000000000000");
+        onChainBalance = whole.toString();
+      }
+    } catch (e) {
+      console.error("Live NEAR RPC check error:", e);
+    }
+
+    if (!liveOnChain) {
+      return NextResponse.json({
+        status: "UNVERIFIED",
+        isVerified: false,
+        walletAddress: cleanAddress,
+        reason: `CRITICAL ALERT: Account '${cleanAddress}' does not exist on NEAR Testnet (verified against live RPC https://rpc.testnet.near.org). Do not send funds!`,
+      });
+    }
+
+    // Query database for registered counterparty KYC record
     const recipient = await prisma.recipient.findFirst({
       where: {
         OR: [
@@ -31,14 +69,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Known sample verified NEAR testnet counterparties
-    const knownVerifiedAccounts: Record<string, string> = {
-      "acme-design.testnet": "Acme Web3 Design Studio",
-      "satoshi-dev.testnet": "Satoshi Freelance Engineering",
-      "near-foundation.testnet": "NEAR Foundation Ecosystem",
-      "paysure-treasury.testnet": "PaySure Protocol Treasury",
-    };
-
     if (recipient && recipient.verificationStatus === "VERIFIED") {
       return NextResponse.json({
         status: "VERIFIED",
@@ -46,18 +76,7 @@ export async function POST(req: NextRequest) {
         displayName: recipient.displayName,
         paymentId: recipient.paymentId,
         walletAddress: recipient.walletAddress,
-        reason: `Account matches confirmed NEAR entity: ${recipient.displayName}. Confirmation of Payee passed.`,
-      });
-    }
-
-    if (knownVerifiedAccounts[cleanAddress]) {
-      return NextResponse.json({
-        status: "VERIFIED",
-        isVerified: true,
-        displayName: knownVerifiedAccounts[cleanAddress],
-        paymentId: cleanAddress.split(".")[0],
-        walletAddress: cleanAddress,
-        reason: `Account verified as an official NEAR ecosystem partner: ${knownVerifiedAccounts[cleanAddress]}.`,
+        reason: `Account '${cleanAddress}' is live on NEAR Testnet and matches verified entity '${recipient.displayName}'. Confirmation of Payee passed.`,
       });
     }
 
@@ -68,25 +87,25 @@ export async function POST(req: NextRequest) {
           isVerified: false,
           displayName: recipient.displayName,
           walletAddress: cleanAddress,
-          reason: `CRITICAL MISMATCH: Invoice names payee as '${name}', but account ID is registered to '${recipient.displayName}'. Do not pay until confirmed!`,
+          reason: `CRITICAL MISMATCH: Invoice names payee as '${name}', but account ID is registered to '${recipient.displayName}'. Fraud risk alert!`,
         });
       }
 
       return NextResponse.json({
-        status: recipient.verificationStatus || "UNVERIFIED",
+        status: recipient.verificationStatus || "WARNING",
         isVerified: recipient.verificationStatus === "VERIFIED",
         displayName: recipient.displayName,
         walletAddress: cleanAddress,
-        reason: "Payee found in registry, but full KYC / on-chain attestation is pending.",
+        reason: `Account is active on NEAR Testnet (balance: ~${onChainBalance} NEAR). Organization attestation is pending.`,
       });
     }
 
-    // Completely unknown account
+    // Account exists on NEAR testnet but not registered in PaySure KYC
     return NextResponse.json({
       status: "UNVERIFIED",
       isVerified: false,
       walletAddress: cleanAddress,
-      reason: "No registered PaySure identity or Confirmation of Payee record found for this NEAR account. Verify identity manually before sending funds.",
+      reason: `Live active NEAR Testnet account confirmed on-chain (balance: ~${onChainBalance} NEAR). No business KYC attestation filed in PaySure yet.`,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

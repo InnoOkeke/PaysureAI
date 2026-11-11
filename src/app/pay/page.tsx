@@ -224,57 +224,8 @@ export default function PayPage() {
     setStep(2);
   };
 
-  const handleExecutePayment = async () => {
-    if (!isConnected || !accountId) {
-      connect();
-      return;
-    }
-
-    setIsExecuting(true);
-    try {
-      // Simulate real NEAR network consensus latency (1.8s)
-      await new Promise((res) => setTimeout(res, 1800));
-
-      // Generate a realistic 32-byte base58-style NEAR transaction hash
-      const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-      let txHash = "";
-      for (let i = 0; i < 44; i++) {
-        txHash += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-
-      // Record confirmed transaction in database
-      const res = await fetch("/api/payments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          senderAddress: accountId,
-          recipientAddress: recipient,
-          amount: parseFloat(amount),
-          tokenAddress: tokenSymbol === "NEAR" ? "native.near" : "usdc.fakes.testnet",
-          transactionHash: txHash,
-          invoiceId: invoiceId || null,
-          invoiceReference: invoiceReference || `INV-${Date.now().toString().slice(-4)}`,
-          network: "NEAR Testnet",
-          chainId: 0,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.payment) {
-        setReceiptData(data.payment);
-        setStep(3);
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-        });
-      }
-    } catch (err: any) {
-      console.error("NEAR Payment execution error:", err);
-      alert("Error settling transaction on NEAR Testnet.");
-    } finally {
-      setIsExecuting(false);
-    }
+  const handleExecutePayment = () => {
+    handlePayWithMyNearWallet();
   };
 
   const downloadPdfReceipt = () => {
@@ -584,16 +535,6 @@ export default function PayPage() {
               <label className="text-xs font-bold text-slate-200 uppercase tracking-wider">
                 Recipient NEAR Account ID
               </label>
-              <button
-                type="button"
-                onClick={() => {
-                  setRecipient("acme-design.testnet");
-                  checkPayee("acme-design.testnet", "Acme Web3 Design Studio");
-                }}
-                className="text-[11px] text-brand-400 hover:text-brand-300 font-medium"
-              >
-                Use sample: acme-design.testnet
-              </button>
             </div>
 
             <div className="relative">
@@ -826,25 +767,14 @@ export default function PayPage() {
                 </button>
               </div>
             ) : (
-              <div className="flex flex-wrap items-center gap-2.5 order-1 sm:order-2">
+              <div className="flex items-center gap-2.5 order-1 sm:order-2">
                 <button
                   type="button"
                   onClick={handlePayWithMyNearWallet}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all active:scale-[0.98]"
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all active:scale-[0.98]"
                 >
                   <ExternalLink className="h-4 w-4" />
-                  <span>Sign & Pay with MyNearWallet (Live Testnet)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleExecutePayment}
-                  disabled={isExecuting}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-750 border border-navy-700 disabled:opacity-50 text-slate-200 text-xs font-semibold transition-all"
-                  title="Auto-settles within Autonomous Business treasury limits"
-                >
-                  {isExecuting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>{isExecuting ? "Executing..." : "Instant Autonomous Settle"}</span>
+                  <span>Sign & Transfer with MyNearWallet (Live Testnet)</span>
                 </button>
               </div>
             )}

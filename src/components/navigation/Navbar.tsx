@@ -32,6 +32,7 @@ export function Navbar() {
     { name: "Dashboard", href: "/dashboard", icon: Layers },
     { name: "Invoices", href: "/invoices", icon: FileText },
     { name: "Send Payment", href: "/pay", icon: Send },
+    { name: "Treasury Guardrails", href: "/treasury", icon: ShieldCheck },
     { name: "Recipients", href: "/recipients", icon: Users },
     { name: "History", href: "/history", icon: History },
   ];

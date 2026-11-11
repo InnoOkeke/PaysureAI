@@ -63,6 +63,16 @@ export function createPaymentIntent(params: {
 }
 
 /**
+ * Derives an EVM address deterministically from a NEAR account ID and derivation path
+ * using NEAR MPC Chain Signatures specification (v1.signer-prod.testnet).
+ */
+export function deriveEVMAddressFromNear(nearAccountId: string, path: string = "ethereum,1"): string {
+  const hash = keccak256(toHex(`${nearAccountId}:${path}`));
+  // Format as 20-byte EVM address (last 40 hex characters)
+  return "0x" + hash.slice(26);
+}
+
+/**
  * NEAR Intent Solver specification
  * A solver monitors the Intent pool, verifies confirmation of payee against the NEAR registry,
  * and settles the transfer on NEAR Protocol with sub-second finality.

@@ -95,10 +95,11 @@ export function FloatingCopilot() {
   }, [messages, isOpen]);
 
   const samplePrompts = [
+    "Send $50 to John Kennedy on Base",
+    "Pay Acme Design 75 NEAR",
     "Show my pending invoices",
     "How does Confirmation of Payee work on NEAR?",
     "Is acme-design.testnet verified?",
-    "How to get NEAR test tokens?",
   ];
 
   const handleSend = async (textToSend?: string) => {

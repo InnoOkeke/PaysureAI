@@ -14,7 +14,12 @@ import {
   ArrowRight,
   Receipt,
   Download,
-  Sparkles
+  Sparkles,
+  Zap,
+  Globe,
+  Cpu,
+  Check,
+  RotateCcw
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import jsPDF from "jspdf";
@@ -47,6 +52,53 @@ export default function PayPage() {
   // Settlement states
   const [isExecuting, setIsExecuting] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
+
+  // Conversational Intent states
+  const [intentInput, setIntentInput] = useState("");
+  const [isResolvingIntent, setIsResolvingIntent] = useState(false);
+  const [resolvedIntent, setResolvedIntent] = useState<any>(null);
+  const [intentError, setIntentError] = useState<string | null>(null);
+
+  const sampleIntents = [
+    "Send $50 to John Kennedy on Base",
+    "Pay Acme Design 75 NEAR",
+    "Send $120 to Satoshi Dev on Arbitrum",
+    "Transfer $3,500 to Marketing Vendor on Ethereum",
+  ];
+
+  const handleResolveIntent = async (customPrompt?: string) => {
+    const promptToUse = customPrompt || intentInput;
+    if (!promptToUse.trim()) return;
+    if (customPrompt) setIntentInput(customPrompt);
+    setIsResolvingIntent(true);
+    setIntentError(null);
+    try {
+      const res = await fetch("/api/near/intents/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: promptToUse, senderAccount: accountId || "company.near" }),
+      });
+      const data = await res.json();
+      if (data.resolved) {
+        setResolvedIntent(data.resolved);
+      } else {
+        setIntentError(data.error || "Failed to resolve intent");
+      }
+    } catch (e: any) {
+      setIntentError(e.message || "Network error resolving intent");
+    } finally {
+      setIsResolvingIntent(false);
+    }
+  };
+
+  const handleApplyResolvedIntent = () => {
+    if (!resolvedIntent) return;
+    setRecipient(resolvedIntent.resolvedPayee.accountId);
+    setAmount(resolvedIntent.extractedAmount.toString());
+    setTokenSymbol(resolvedIntent.extractedCurrency === "NEAR" ? "NEAR" : "USDC");
+    setInvoiceReference(resolvedIntent.memo);
+    checkPayee(resolvedIntent.resolvedPayee.accountId, resolvedIntent.resolvedPayee.displayName);
+  };
 
   // Pre-fill from invoice if param present
   useEffect(() => {
@@ -267,10 +319,193 @@ export default function PayPage() {
 
       {/* STEP 1: Enter Details */}
       {step === 1 && (
-        <form
-          onSubmit={handleProceedToReview}
-          className="rounded-2xl bg-navy-900/80 border border-navy-800 p-6 sm:p-8 space-y-6 shadow-xl"
-        >
+        <div className="space-y-6">
+          {/* Natural Language Intent Resolver Box */}
+          <div className="rounded-2xl border border-brand-500/30 bg-gradient-to-br from-navy-900/90 via-navy-950 to-brand-950/20 p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-white">Conversational Intent Resolver</h3>
+                    <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-300">
+                      NEAR Intents & MPC Chain Signatures
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    Type a payment prompt across NEAR or EVM chains. PaySure checks Confirmation of Payee and Autonomous Treasury rules.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Input Bar */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={intentInput}
+                  onChange={(e) => setIntentInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleResolveIntent();
+                    }
+                  }}
+                  placeholder='e.g. "Send $50 to John Kennedy on Base" or "Pay Acme Design 75 NEAR"'
+                  className="w-full bg-navy-950 border border-navy-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 transition-colors"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => handleResolveIntent()}
+                disabled={isResolvingIntent || !intentInput.trim()}
+                className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-brand-600/30 transition-all shrink-0"
+              >
+                {isResolvingIntent ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Resolving Intent...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    <span>Resolve Intent</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Sample Intent Chips */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-semibold text-slate-400">Quick Prompt Examples:</span>
+              <div className="flex flex-wrap gap-2">
+                {sampleIntents.map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleResolveIntent(chip)}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-navy-950/80 hover:bg-navy-800 border border-navy-800 text-slate-300 hover:text-white transition-all flex items-center gap-1.5"
+                  >
+                    <Zap className="h-3 w-3 text-brand-400" />
+                    <span>{chip}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Intent Error Message */}
+            {intentError && (
+              <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
+                <span>{intentError}</span>
+              </div>
+            )}
+
+            {/* Resolved Intent Card */}
+            {resolvedIntent && (
+              <div className="rounded-xl border border-emerald-500/40 bg-navy-950/90 p-4 space-y-3.5 mt-2 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between border-b border-navy-800 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs font-bold text-emerald-300">Intent Successfully Resolved</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                      Rail: {resolvedIntent.settlementExecution.settlementRail}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setResolvedIntent(null)}
+                      className="text-slate-400 hover:text-white text-xs"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="bg-navy-900/80 p-3 rounded-lg border border-navy-800">
+                    <span className="text-slate-400 block text-[11px]">Destination Chain</span>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <Globe className="h-4 w-4 text-brand-400" />
+                      <span className="font-bold text-white text-sm">{resolvedIntent.targetChain}</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-navy-900/80 p-3 rounded-lg border border-navy-800">
+                    <span className="text-slate-400 block text-[11px]">Parsed Amount</span>
+                    <span className="font-mono font-bold text-emerald-400 text-sm mt-1 block">
+                      ${resolvedIntent.extractedAmount.toFixed(2)} {resolvedIntent.extractedCurrency}
+                    </span>
+                  </div>
+
+                  <div className="bg-navy-900/80 p-3 rounded-lg border border-navy-800">
+                    <span className="text-slate-400 block text-[11px]">Payee Confirmation</span>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                      <span className="font-semibold text-slate-200 truncate">
+                        {resolvedIntent.resolvedPayee.displayName}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-400 block truncate">
+                      {resolvedIntent.resolvedPayee.targetChainAddress}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Policy Guardrails Status Box */}
+                <div className={`p-3 rounded-lg border text-xs flex items-start gap-2.5 ${
+                  resolvedIntent.policyCheck.autoExecutable
+                    ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-300"
+                    : "bg-amber-950/20 border-amber-500/30 text-amber-300"
+                }`}>
+                  {resolvedIntent.policyCheck.autoExecutable ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                  )}
+                  <div className="space-y-0.5 text-[11px]">
+                    <span className="font-bold block">
+                      {resolvedIntent.policyCheck.autoExecutable
+                        ? "Autonomous Business Guardrail: APPROVED"
+                        : "Security Policy Flag: Human Signoff Required"}
+                    </span>
+                    <span className="text-slate-300 block">
+                      Trust Score: {resolvedIntent.resolvedPayee.reputationScore}/100 • Daily Velocity Cap: Compliant
+                      {resolvedIntent.policyCheck.violations.length > 0 && ` • Warning: ${resolvedIntent.policyCheck.violations.join(", ")}`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Apply Button */}
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={handleApplyResolvedIntent}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/30"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    <span>Apply & Auto-Fill Payment Details</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="relative flex items-center justify-center">
+            <div className="border-t border-navy-800 w-full" />
+            <span className="absolute bg-[#070B14] px-4 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              Or Configure Payment Manually
+            </span>
+          </div>
+
+          <form
+            onSubmit={handleProceedToReview}
+            className="rounded-2xl bg-navy-900/80 border border-navy-800 p-6 sm:p-8 space-y-6 shadow-xl"
+          >
           {/* Recipient Account Input */}
           <div className="space-y-2">
             <div className="flex justify-between items-center">
@@ -420,6 +655,7 @@ export default function PayPage() {
             </button>
           </div>
         </form>
+      </div>
       )}
 
       {/* STEP 2: Review & Sign */}
@@ -468,8 +704,28 @@ export default function PayPage() {
 
             <div className="flex justify-between items-center py-1 border-b border-navy-800/60">
               <span className="text-slate-400">Settlement Network:</span>
-              <span className="font-semibold text-slate-200">NEAR Protocol (Testnet)</span>
+              <span className="font-semibold text-slate-200">
+                {resolvedIntent ? `${resolvedIntent.targetChain} (${resolvedIntent.settlementExecution.settlementRail})` : "NEAR Protocol (Testnet)"}
+              </span>
             </div>
+
+            {resolvedIntent?.settlementExecution?.mpcSignerDerivation && (
+              <div className="flex justify-between items-center py-1 border-b border-navy-800/60">
+                <span className="text-slate-400">NEAR MPC Derived Address:</span>
+                <span className="font-mono text-[11px] text-brand-300 truncate max-w-[260px]">
+                  {resolvedIntent.settlementExecution.mpcSignerDerivation}
+                </span>
+              </div>
+            )}
+
+            {resolvedIntent?.policyCheck && (
+              <div className="flex justify-between items-center py-1 border-b border-navy-800/60">
+                <span className="text-slate-400">Autonomous Treasury Guardrail:</span>
+                <span className={`font-semibold ${resolvedIntent.policyCheck.autoExecutable ? "text-emerald-400" : "text-amber-400"}`}>
+                  {resolvedIntent.policyCheck.autoExecutable ? "✓ Autonomous Execution Approved" : "⚠ Manual Human Signoff Required"}
+                </span>
+              </div>
+            )}
 
             <div className="flex justify-between items-center py-1">
               <span className="text-slate-400">Invoice / Memo Reference:</span>

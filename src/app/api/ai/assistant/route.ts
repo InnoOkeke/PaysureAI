@@ -1,12 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deepseek, DEEPSEEK_MODEL } from "@/lib/deepseek";
 import { prisma } from "@/lib/prisma";
+import { resolveNaturalLanguageIntent } from "@/lib/near/intentResolver";
 
 export async function POST(req: NextRequest) {
   try {
     const { message } = await req.json();
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
+    }
+
+    // Check if the user is expressing a conversational payment intent
+    const lower = message.toLowerCase().trim();
+    const isPaymentIntent = 
+      lower.startsWith("send ") || 
+      lower.startsWith("pay ") || 
+      lower.startsWith("transfer ") ||
+      lower.includes("send $") ||
+      lower.includes("pay $") ||
+      lower.includes("pay acme") ||
+      lower.includes("on base") ||
+      lower.includes("on eth") ||
+      lower.includes("on arbitrum") ||
+      lower.includes("on solana");
+
+    if (isPaymentIntent) {
+      const intent = resolveNaturalLanguageIntent(message, "company.near");
+      const policyMsg = intent.policyCheck.autoExecutable
+        ? "✓ Autonomous Treasury Approval: Payment is within policy threshold ($250 USD) and daily velocity limits."
+        : `⚠ Security Policy Alert: ${intent.policyCheck.violations.join(", ") || "Requires Human Signoff"}`;
+
+      const reply = `🎯 **NEAR Cross-Chain Intent Resolved**:\n\n` +
+        `• **Target Chain**: ${intent.targetChain} (${intent.settlementExecution.settlementRail})\n` +
+        `• **Amount**: $${intent.extractedAmount.toFixed(2)} ${intent.extractedCurrency}\n` +
+        `• **Payee**: ${intent.resolvedPayee.displayName} (\`${intent.resolvedPayee.targetChainAddress}\`)\n` +
+        `• **Confirmation of Payee**: ${intent.resolvedPayee.verificationStatus} (Trust Score: ${intent.resolvedPayee.reputationScore}/100)\n` +
+        `• **Treasury Guardrail**: ${policyMsg}\n\n` +
+        `👉 You can execute this transfer directly on the **[Send Payment page](/pay)**.`;
+
+      return NextResponse.json({ reply, intent });
     }
 
     // Retrieve live context from database

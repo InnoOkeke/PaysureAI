@@ -14,7 +14,8 @@ import {
   Send,
   Users,
   History,
-  Sparkles
+  Sparkles,
+  RotateCw
 } from "lucide-react";
 import { useState } from "react";
 import { PaySureLogo } from "@/components/brand/Logos";
@@ -23,7 +24,17 @@ import { NEAR_CONFIG } from "@/lib/near/config";
 
 export function Navbar() {
   const pathname = usePathname();
-  const { accountId, isConnected, balance, connect, disconnect, isConnecting } = useNearWallet();
+  const { 
+    accountId, 
+    isConnected, 
+    balance, 
+    connect, 
+    connectMyNearWallet, 
+    disconnect, 
+    refreshBalance, 
+    isConnecting, 
+    isFetchingBalance 
+  } = useNearWallet();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [customInputOpen, setCustomInputOpen] = useState(false);
   const [customInput, setCustomInput] = useState("");
@@ -104,12 +115,22 @@ export function Navbar() {
           {!isConnected ? (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => connect()}
+                onClick={() => connectMyNearWallet()}
                 disabled={isConnecting}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-brand-600 hover:bg-brand-500 text-white shadow-md shadow-brand-600/25 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-md shadow-brand-600/30 transition-all active:scale-[0.98] disabled:opacity-50"
+                title="Connect via official MyNearWallet testnet"
               >
                 <Wallet className="h-4 w-4" />
-                <span>{isConnecting ? "Connecting NEAR..." : "Connect NEAR Wallet"}</span>
+                <span>MyNearWallet (Live)</span>
+              </button>
+
+              <button
+                onClick={() => connect()}
+                disabled={isConnecting}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-navy-900 hover:bg-navy-850 text-slate-300 border border-navy-800 transition-all"
+                title="Connect instant demo account"
+              >
+                <span>Demo Account</span>
               </button>
             </div>
           ) : (
@@ -135,8 +156,18 @@ export function Navbar() {
 
                   <div className="space-y-2 p-2 bg-navy-950/60 rounded-xl mb-3 text-xs">
                     <div className="flex justify-between items-center text-slate-300">
-                      <span className="text-slate-400">NEAR Balance</span>
-                      <span className="font-mono font-semibold text-brand-400">{balance} NEAR</span>
+                      <span className="text-slate-400">Live NEAR Balance</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-brand-300">{balance} NEAR</span>
+                        <button
+                          onClick={() => refreshBalance()}
+                          disabled={isFetchingBalance}
+                          title="Refresh live testnet balance"
+                          className="text-slate-500 hover:text-brand-300 transition-colors p-0.5"
+                        >
+                          <RotateCw className={`h-3 w-3 ${isFetchingBalance ? "animate-spin text-brand-400" : ""}`} />
+                        </button>
+                      </div>
                     </div>
                     <div className="flex justify-between items-center text-slate-300">
                       <span className="text-slate-400">Protocol</span>

@@ -32,8 +32,10 @@ export default function PayPage() {
   const router = useRouter();
   const invoiceIdParam = searchParams.get("invoiceId");
   const recipientParam = searchParams.get("recipient");
+  const txHashParam = searchParams.get("transactionHashes");
+  const errorCodeParam = searchParams.get("errorCode");
 
-  const { accountId, isConnected, balance, connect, isConnecting } = useNearWallet();
+  const { accountId, isConnected, balance, connect, connectMyNearWallet, isConnecting } = useNearWallet();
 
   // Workflow states
   const [recipient, setRecipient] = useState(recipientParam || "");
@@ -120,6 +122,76 @@ export default function PayPage() {
       checkPayee(recipientParam);
     }
   }, [invoiceIdParam, recipientParam]);
+
+  // Handle return callback from MyNearWallet after signing real on-chain transaction
+  useEffect(() => {
+    if (txHashParam) {
+      const rec = recipientParam || "acme-design.testnet";
+      const amt = parseFloat(searchParams.get("amount") || "10");
+      setRecipient(rec);
+      setAmount(amt.toString());
+      setStep(3);
+
+      fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          senderAddress: accountId || "my-near-wallet.testnet",
+          recipientAddress: rec,
+          amount: amt,
+          tokenAddress: "native.near",
+          transactionHash: txHashParam,
+          invoiceId: invoiceIdParam || null,
+          invoiceReference: invoiceReference || `INV-${Date.now().toString().slice(-4)}`,
+          network: "NEAR Testnet",
+          chainId: 0,
+        }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.payment) {
+            setReceiptData(data.payment);
+          } else {
+            setReceiptData({
+              senderAddress: accountId || "my-near-wallet.testnet",
+              recipientAddress: rec,
+              amount: amt,
+              transactionHash: txHashParam,
+              createdAt: new Date().toISOString(),
+            });
+          }
+          confetti({
+            particleCount: 120,
+            spread: 80,
+            origin: { y: 0.6 },
+          });
+        })
+        .catch(console.error);
+    }
+  }, [txHashParam]);
+
+  const handlePayWithMyNearWallet = () => {
+    if (!recipient || !isValidNearAccountId(recipient)) {
+      alert("Please enter a valid NEAR Account ID (e.g. acme-design.testnet).");
+      return;
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+
+    const currentUrl = typeof window !== "undefined" ? window.location.origin + "/pay" : "";
+    const redirectUrl = `${currentUrl}?recipient=${encodeURIComponent(recipient)}&amount=${encodeURIComponent(
+      amount
+    )}&invoiceId=${encodeURIComponent(invoiceId || "")}`;
+
+    // MyNearWallet testnet send-money link
+    const walletUrl = `${NEAR_CONFIG.walletUrl}/send-money?recipient=${encodeURIComponent(
+      recipient
+    )}&amount=${encodeURIComponent(amount)}&redirect_url=${encodeURIComponent(redirectUrl)}`;
+
+    window.location.href = walletUrl;
+  };
 
   const checkPayee = async (addr: string, name?: string) => {
     if (!addr) return;
@@ -734,34 +806,47 @@ export default function PayPage() {
           </div>
 
           {/* Actions */}
-          <div className="pt-4 border-t border-navy-800 flex items-center justify-between">
+          <div className="pt-4 border-t border-navy-800 flex flex-col sm:flex-row items-center justify-between gap-3">
             <button
               onClick={() => setStep(1)}
-              className="text-xs text-slate-400 hover:text-white"
+              className="text-xs text-slate-400 hover:text-white order-2 sm:order-1"
             >
-              Cancel
+              &larr; Back to Details
             </button>
 
             {!isConnected ? (
-              <button
-                onClick={() => connect()}
-                className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-600/30"
-              >
-                Connect NEAR Wallet to Sign
-              </button>
+              <div className="flex items-center gap-2 order-1 sm:order-2">
+                <button
+                  type="button"
+                  onClick={() => connectMyNearWallet()}
+                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-600/30"
+                >
+                  <Wallet className="h-4 w-4" />
+                  <span>Connect MyNearWallet to Sign</span>
+                </button>
+              </div>
             ) : (
-              <button
-                onClick={handleExecutePayment}
-                disabled={isExecuting}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white text-xs font-bold shadow-lg shadow-brand-600/30 transition-all"
-              >
-                {isExecuting && <Loader2 className="h-4 w-4 animate-spin" />}
-                <span>
-                  {isExecuting
-                    ? "Settling on NEAR Testnet..."
-                    : `Confirm & Pay ${formatCurrency(amount)} ${tokenSymbol}`}
-                </span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2.5 order-1 sm:order-2">
+                <button
+                  type="button"
+                  onClick={handlePayWithMyNearWallet}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all active:scale-[0.98]"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>Sign & Pay with MyNearWallet (Live Testnet)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExecutePayment}
+                  disabled={isExecuting}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-750 border border-navy-700 disabled:opacity-50 text-slate-200 text-xs font-semibold transition-all"
+                  title="Auto-settles within Autonomous Business treasury limits"
+                >
+                  {isExecuting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>{isExecuting ? "Executing..." : "Instant Autonomous Settle"}</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

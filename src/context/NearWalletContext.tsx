@@ -9,8 +9,11 @@ interface NearWalletContextType {
   balance: string;
   networkId: string;
   connect: (customAccountId?: string) => void;
+  connectMyNearWallet: () => void;
   disconnect: () => void;
+  refreshBalance: () => Promise<void>;
   isConnecting: boolean;
+  isFetchingBalance: boolean;
 }
 
 const NearWalletContext = createContext<NearWalletContextType>({
@@ -19,37 +22,115 @@ const NearWalletContext = createContext<NearWalletContextType>({
   balance: "0.00",
   networkId: NEAR_CONFIG.networkId,
   connect: () => {},
+  connectMyNearWallet: () => {},
   disconnect: () => {},
+  refreshBalance: async () => {},
   isConnecting: false,
+  isFetchingBalance: false,
 });
+
+async function queryLiveNearBalance(account: string): Promise<string> {
+  try {
+    const res = await fetch(NEAR_CONFIG.nodeUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: "live-near-balance",
+        method: "query",
+        params: {
+          request_type: "view_account",
+          finality: "final",
+          account_id: account,
+        },
+      }),
+    });
+    const data = await res.json();
+    if (data.result?.amount) {
+      // 1 NEAR = 10^24 yoctoNEAR
+      const YOCTO_PER_NEAR = BigInt("1000000000000000000000000");
+      const YOCTO_CENT = BigInt("10000000000000000000000");
+      const yocto = BigInt(data.result.amount);
+      const whole = yocto / YOCTO_PER_NEAR;
+      const frac = (yocto % YOCTO_PER_NEAR) / YOCTO_CENT;
+      return `${whole}.${frac.toString().padStart(2, "0")}`;
+    }
+    return "0.00";
+  } catch (err) {
+    console.error("Live NEAR balance fetch error:", err);
+    return "0.00";
+  }
+}
 
 export function NearWalletProvider({ children }: { children: React.ReactNode }) {
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [balance, setBalance] = useState("124.50"); // Sample testnet NEAR balance
+  const [balance, setBalance] = useState("0.00");
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isFetchingBalance, setIsFetchingBalance] = useState(false);
 
+  // Initialize session & check for MyNearWallet redirect callback (?account_id=...)
   useEffect(() => {
-    // Restore session from localStorage if available
-    const saved = localStorage.getItem("paysure_near_account");
-    if (saved && isValidNearAccountId(saved)) {
-      setAccountId(saved);
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const returnedAccount = urlParams.get("account_id");
+
+      if (returnedAccount && isValidNearAccountId(returnedAccount)) {
+        setAccountId(returnedAccount);
+        localStorage.setItem("paysure_near_account", returnedAccount);
+        // Clean URL params without page reload
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+        return;
+      }
+
+      // Restore from localStorage
+      const saved = localStorage.getItem("paysure_near_account");
+      if (saved && isValidNearAccountId(saved)) {
+        setAccountId(saved);
+      }
     }
   }, []);
 
-  const connect = (customAccountId?: string) => {
+  // Fetch live balance on account change
+  useEffect(() => {
+    if (accountId) {
+      refreshBalance();
+    }
+  }, [accountId]);
+
+  const refreshBalance = async () => {
+    if (!accountId) return;
+    setIsFetchingBalance(true);
+    try {
+      const liveBal = await queryLiveNearBalance(accountId);
+      setBalance(liveBal);
+    } finally {
+      setIsFetchingBalance(false);
+    }
+  };
+
+  const connect = async (customAccountId?: string) => {
     setIsConnecting(true);
-    setTimeout(() => {
-      // Default to user's testnet account or custom prompt
-      const target = customAccountId || "paysure-treasury.testnet";
-      setAccountId(target);
-      localStorage.setItem("paysure_near_account", target);
-      setBalance("148.82");
-      setIsConnecting(false);
-    }, 400);
+    const target = (customAccountId || "paysure-treasury.testnet").trim();
+    setAccountId(target);
+    localStorage.setItem("paysure_near_account", target);
+    const liveBal = await queryLiveNearBalance(target);
+    setBalance(liveBal);
+    setIsConnecting(false);
+  };
+
+  const connectMyNearWallet = () => {
+    if (typeof window === "undefined") return;
+    const currentUrl = window.location.href;
+    const loginUrl = `${NEAR_CONFIG.walletUrl}/login/?success_url=${encodeURIComponent(
+      currentUrl
+    )}&failure_url=${encodeURIComponent(currentUrl)}`;
+    window.location.href = loginUrl;
   };
 
   const disconnect = () => {
     setAccountId(null);
+    setBalance("0.00");
     localStorage.removeItem("paysure_near_account");
   };
 
@@ -61,8 +142,11 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
         balance,
         networkId: NEAR_CONFIG.networkId,
         connect,
+        connectMyNearWallet,
         disconnect,
+        refreshBalance,
         isConnecting,
+        isFetchingBalance,
       }}
     >
       {children}
@@ -73,4 +157,3 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
 export function useNearWallet() {
   return useContext(NearWalletContext);
 }
-

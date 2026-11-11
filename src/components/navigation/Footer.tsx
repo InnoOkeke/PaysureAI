@@ -15,45 +15,45 @@ export function Footer() {
 
         <div className="flex items-center gap-6 text-slate-400">
           <a
-            href="https://wiki.qday.info/"
+            href="https://docs.near.org"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-white transition-colors flex items-center gap-1"
           >
-            <span>Aevum Docs</span>
+            <span>NEAR Docs</span>
             <ExternalLink className="h-3 w-3" />
           </a>
           <a
-            href="https://faucet.qday.info/en"
+            href="https://testnet.mynearwallet.com"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-white transition-colors flex items-center gap-1"
           >
-            <span>tUSD8 Faucet</span>
+            <span>NEAR Wallet & Faucet</span>
             <ExternalLink className="h-3 w-3" />
           </a>
           <a
-            href="https://explorer-test.qday.info/"
+            href="https://testnet.nearblocks.io"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-white transition-colors flex items-center gap-1"
           >
-            <span>Explorer (44005)</span>
+            <span>NEARBlocks Explorer</span>
             <ExternalLink className="h-3 w-3" />
           </a>
           <a
-            href="https://dorahacks.io/hackathon/qday"
+            href="https://near.org"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-white transition-colors flex items-center gap-1"
           >
-            <span>Aevum Builder Challenge</span>
+            <span>NEAR Hackathon</span>
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>
 
         <div className="text-slate-500">
-          © {new Date().getFullYear()} PaySure AI. Built on QDay Aevum Testnet.
+          © {new Date().getFullYear()} PaySure AI. Built on NEAR Protocol.
         </div>
       </div>
     </footer>

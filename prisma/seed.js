@@ -2,18 +2,26 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Seeding PaySure AI database...");
+  console.log("Seeding PaySure AI database for NEAR Protocol...");
+
+  // Clear existing records
+  await prisma.receipt.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.invoice.deleteMany();
+  await prisma.recipient.deleteMany();
 
   const r1 = await prisma.recipient.upsert({
     where: { paymentId: "acme-design" },
     create: {
       displayName: "Acme Web3 Design Studio",
       paymentId: "acme-design",
-      walletAddress: "0x456569838f1d43009A91ebA4263147Afd7233483".toLowerCase(),
+      walletAddress: "acme-design.testnet",
       verificationStatus: "VERIFIED",
-      notes: "Official Aevum Core Partner & UI design supplier.",
+      notes: "Official NEAR Ecosystem Design Partner.",
     },
-    update: {},
+    update: {
+      walletAddress: "acme-design.testnet",
+    },
   });
 
   const r2 = await prisma.recipient.upsert({
@@ -21,11 +29,13 @@ async function main() {
     create: {
       displayName: "Satoshi Freelance Engineering",
       paymentId: "satoshi-dev",
-      walletAddress: "0x1234567890123456789012345678901234567890".toLowerCase(),
+      walletAddress: "satoshi-dev.testnet",
       verificationStatus: "VERIFIED",
-      notes: "Smart Contract auditor & systems specialist.",
+      notes: "Smart Contract auditor & Rust / NEAR systems specialist.",
     },
-    update: {},
+    update: {
+      walletAddress: "satoshi-dev.testnet",
+    },
   });
 
   const r3 = await prisma.recipient.upsert({
@@ -33,11 +43,13 @@ async function main() {
     create: {
       displayName: "Apex Media Agency",
       paymentId: "apex-media",
-      walletAddress: "0x7777777777777777777777777777777777777777".toLowerCase(),
+      walletAddress: "apex-media.testnet",
       verificationStatus: "WARNING",
-      notes: "Recent wallet migration reported by payee.",
+      notes: "Recent key rotation reported by payee. Exercise caution.",
     },
-    update: {},
+    update: {
+      walletAddress: "apex-media.testnet",
+    },
   });
 
   const inv1 = await prisma.invoice.create({
@@ -46,10 +58,10 @@ async function main() {
       recipientId: r1.id,
       recipientName: r1.displayName,
       recipientAddress: r1.walletAddress,
-      amount: 750.0,
-      token: "tUSD8",
+      amount: 75.0,
+      token: "NEAR",
       dueDate: "2026-11-20",
-      description: "UI/UX Brand Design & Frontend Systems",
+      description: "UI/UX Brand Design & Frontend Systems on NEAR",
       status: "PENDING",
     },
   });
@@ -60,10 +72,10 @@ async function main() {
       recipientId: r2.id,
       recipientName: r2.displayName,
       recipientAddress: r2.walletAddress,
-      amount: 1250.0,
-      token: "tUSD8",
+      amount: 120.0,
+      token: "NEAR",
       dueDate: "2026-11-25",
-      description: "Aevum Smart Contract Security Audit",
+      description: "NEAR Smart Contract Rust Security Audit",
       status: "PENDING",
     },
   });
@@ -74,45 +86,47 @@ async function main() {
       recipientId: r1.id,
       recipientName: r1.displayName,
       recipientAddress: r1.walletAddress,
-      amount: 500.0,
-      token: "tUSD8",
+      amount: 50.0,
+      token: "NEAR",
       dueDate: "2026-11-10",
-      description: "Design Systems Maintenance & Icons",
+      description: "NEAR Design Systems Maintenance & Icons",
       status: "PAID",
     },
   });
 
-  const txHash =
-    "0x" +
-    Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+  const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+  let txHash = "";
+  for (let i = 0; i < 44; i++) {
+    txHash += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
 
   await prisma.user.upsert({
-    where: { walletAddress: "0x1111111111111111111111111111111111111111".toLowerCase() },
-    create: { walletAddress: "0x1111111111111111111111111111111111111111".toLowerCase() },
+    where: { walletAddress: "company.testnet" },
+    create: { walletAddress: "company.testnet" },
     update: {},
   });
 
   await prisma.payment.create({
     data: {
-      senderAddress: "0x1111111111111111111111111111111111111111".toLowerCase(),
+      senderAddress: "company.testnet",
       recipientAddress: r1.walletAddress,
-      amount: 500.0,
-      tokenAddress: "0x456569838f1d43009A91ebA4263147Afd7233483".toLowerCase(),
+      amount: 50.0,
+      tokenAddress: "NEAR",
       transactionHash: txHash,
       invoiceId: inv3.id,
       invoiceReference: inv3.invoiceNumber,
-      network: "QDay Aevum Testnet",
-      chainId: 44005,
+      network: "NEAR Protocol (Testnet)",
+      chainId: 0,
       status: "SUCCESS",
       receipt: {
         create: {
-          receiptNumber: "RCP-2026-AEVUM-5120",
+          receiptNumber: "RCP-2026-NEAR-5120",
         },
       },
     },
   });
 
-  console.log("✓ Database seeded successfully!");
+  console.log("✓ Database seeded successfully for NEAR Protocol!");
 }
 
 main()

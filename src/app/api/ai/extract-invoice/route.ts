@@ -7,7 +7,7 @@ const ExtractedInvoiceSchema = z.object({
   recipientName: z.string().default("Unknown Recipient"),
   recipientAddress: z.string().default(""),
   amount: z.number().default(0),
-  currency: z.string().default("tUSD8"),
+  currency: z.string().default("NEAR"),
   dueDate: z.string().optional(),
   description: z.string().optional(),
   lineItems: z

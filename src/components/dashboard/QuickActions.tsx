@@ -13,8 +13,8 @@ export function QuickActions() {
       primary: true,
     },
     {
-      title: "Send Stablecoins",
-      description: "Direct tUSD8 transfer with payee check",
+      title: "Send Payment / Intent",
+      description: "Direct NEAR / USDC transfer with payee check",
       href: "/pay",
       icon: Send,
     },

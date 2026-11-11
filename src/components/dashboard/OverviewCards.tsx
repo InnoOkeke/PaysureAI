@@ -21,7 +21,7 @@ export function OverviewCards({
   const cards = [
     {
       title: "Total Amount Sent",
-      value: `${formatCurrency(totalVolume)} tUSD8`,
+      value: `${formatCurrency(totalVolume)} NEAR`,
       sub: `${totalPaymentsCount} transactions settled`,
       icon: Send,
       color: "text-brand-400",
@@ -31,7 +31,7 @@ export function OverviewCards({
     {
       title: "Pending Invoices",
       value: `${pendingInvoicesCount}`,
-      sub: `${formatCurrency(pendingVolume)} tUSD8 awaiting payment`,
+      sub: `${formatCurrency(pendingVolume)} NEAR awaiting payment`,
       icon: FileText,
       color: "text-amber-400",
       bg: "bg-amber-500/10",
@@ -48,8 +48,8 @@ export function OverviewCards({
     },
     {
       title: "Settlement Network",
-      value: "QDay Aevum",
-      sub: "Chain ID 44005 (Live Testnet)",
+      value: "NEAR Protocol",
+      sub: "NEAR Testnet (Sub-second finality)",
       icon: TrendingUp,
       color: "text-brand-accent",
       bg: "bg-cyan-500/10",

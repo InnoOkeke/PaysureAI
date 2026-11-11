@@ -1,0 +1,50 @@
+{
+  "name": "paysure-ai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "node -e \"if (process.env.DATABASE_URL && process.env.DATABASE_URL.trim() !== '') { require('child_process').execSync('npx prisma db push', { stdio: 'inherit' }); } else { console.log('Skipping db push: DATABASE_URL not set'); }\" && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "compile:contracts": "hardhat compile",
+    "test:contracts": "hardhat test",
+    "deploy:contracts": "hardhat run scripts/deploy.js --network aevum"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@prisma/client": "^5.21.1",
+    "@tanstack/react-query": "^5.59.16",
+    "canvas-confetti": "^1.9.3",
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.11.11",
+    "jspdf": "^2.5.2",
+    "lucide-react": "^0.454.0",
+    "next": "14.2.15",
+    "openai": "^4.71.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.5.4",
+    "viem": "^2.21.40",
+    "wagmi": "^2.12.25",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.1.0",
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/node": "^20.17.6",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.15",
+    "hardhat": "^2.22.15",
+    "postcss": "^8.4.47",
+    "prisma": "^5.21.1",
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.6.3"
+  }
+}

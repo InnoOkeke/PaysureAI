@@ -35,7 +35,7 @@ export default function PayPage() {
   const txHashParam = searchParams.get("transactionHashes");
   const errorCodeParam = searchParams.get("errorCode");
 
-  const { accountId, isConnected, balance, connect, connectMyNearWallet, isConnecting } = useNearWallet();
+  const { accountId, isConnected, balance, connect, sendNearPayment, isConnecting } = useNearWallet();
 
   // Workflow states
   const [recipient, setRecipient] = useState(recipientParam || "");
@@ -224,8 +224,57 @@ export default function PayPage() {
     setStep(2);
   };
 
-  const handleExecutePayment = () => {
-    handlePayWithMyNearWallet();
+  const handleExecutePayment = async () => {
+    if (!isConnected || !accountId) {
+      connect();
+      return;
+    }
+    if (!recipient || !isValidNearAccountId(recipient)) {
+      alert("Please enter a valid NEAR Account ID (e.g. alice.testnet).");
+      return;
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+
+    setIsExecuting(true);
+    try {
+      // Live on-chain signing via the connected wallet (MyNearWallet, HOT, Nightly, Meteor, Sender, etc.)
+      const txHash = await sendNearPayment(recipient, amount);
+
+      const res = await fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          senderAddress: accountId,
+          recipientAddress: recipient,
+          amount: parseFloat(amount),
+          tokenAddress: tokenSymbol === "NEAR" ? "native.near" : "usdc.fakes.testnet",
+          transactionHash: txHash || `NEAR-LIVE-${Date.now()}`,
+          invoiceId: invoiceId || null,
+          invoiceReference: invoiceReference || `INV-${Date.now().toString().slice(-4)}`,
+          network: "NEAR Testnet",
+          chainId: 0,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.payment) {
+        setReceiptData(data.payment);
+        setStep(3);
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 },
+        });
+      }
+    } catch (err: any) {
+      console.error("NEAR transaction execution error:", err);
+      alert(err.message || "Failed to execute transaction with connected NEAR wallet.");
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   const downloadPdfReceipt = () => {
@@ -759,22 +808,42 @@ export default function PayPage() {
               <div className="flex items-center gap-2 order-1 sm:order-2">
                 <button
                   type="button"
-                  onClick={() => connectMyNearWallet()}
-                  className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-600/30"
+                  onClick={() => connect()}
+                  className="flex items-center gap-1.5 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-600/30 transition-all active:scale-[0.98]"
                 >
                   <Wallet className="h-4 w-4" />
-                  <span>Connect MyNearWallet to Sign</span>
+                  <span>Connect NEAR Wallet to Sign</span>
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2.5 order-1 sm:order-2">
+              <div className="flex flex-wrap items-center gap-2.5 order-1 sm:order-2">
+                <button
+                  type="button"
+                  onClick={handleExecutePayment}
+                  disabled={isExecuting}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all active:scale-[0.98]"
+                >
+                  {isExecuting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Signing Transaction on NEAR Testnet...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="h-4 w-4" />
+                      <span>Sign & Transfer with {accountId} (Live Testnet)</span>
+                    </>
+                  )}
+                </button>
+
                 <button
                   type="button"
                   onClick={handlePayWithMyNearWallet}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all active:scale-[0.98]"
+                  className="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-navy-800 hover:bg-navy-750 text-slate-300 border border-navy-700 text-xs font-medium transition-all"
+                  title="Or transfer directly via MyNearWallet web"
                 >
-                  <ExternalLink className="h-4 w-4" />
-                  <span>Sign & Transfer with MyNearWallet (Live Testnet)</span>
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span>MyNearWallet Web</span>
                 </button>
               </div>
             )}

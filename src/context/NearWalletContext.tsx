@@ -1,183 +1,209 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { NEAR_CONFIG, isValidNearAccountId } from "@/lib/near/config";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import type { WalletSelector, AccountState } from "@near-wallet-selector/core";
+import { setupWalletSelector, actionCreators } from "@near-wallet-selector/core";
+import { setupModal, type WalletSelectorModal } from "@near-wallet-selector/modal-ui";
+import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
+import { setupHereWallet } from "@near-wallet-selector/here-wallet";
+import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
+import { setupNightly } from "@near-wallet-selector/nightly";
+import { setupSender } from "@near-wallet-selector/sender";
+import { utils } from "near-api-js";
+import { NEAR_CONFIG } from "@/lib/near/config";
 
 interface NearWalletContextType {
+  selector: WalletSelector | null;
+  modal: WalletSelectorModal | null;
+  accounts: Array<AccountState>;
   accountId: string | null;
   isConnected: boolean;
   balance: string;
   networkId: string;
-  connect: (customAccountId?: string) => void;
-  connectMyNearWallet: () => void;
-  disconnect: () => void;
+  connect: () => void;
+  disconnect: () => Promise<void>;
+  sendNearPayment: (recipient: string, amount: string) => Promise<string>;
   refreshBalance: () => Promise<void>;
   isConnecting: boolean;
   isFetchingBalance: boolean;
 }
 
 const NearWalletContext = createContext<NearWalletContextType>({
+  selector: null,
+  modal: null,
+  accounts: [],
   accountId: null,
   isConnected: false,
   balance: "0.00",
   networkId: NEAR_CONFIG.networkId,
   connect: () => {},
-  connectMyNearWallet: () => {},
-  disconnect: () => {},
+  disconnect: async () => {},
+  sendNearPayment: async () => "",
   refreshBalance: async () => {},
   isConnecting: false,
   isFetchingBalance: false,
 });
 
-async function queryLiveNearBalance(account: string): Promise<string> {
-  try {
-    const res = await fetch(NEAR_CONFIG.nodeUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: "live-near-balance",
-        method: "query",
-        params: {
-          request_type: "view_account",
-          finality: "final",
-          account_id: account,
-        },
-      }),
-    });
-    const data = await res.json();
-    if (data.result?.amount) {
-      // 1 NEAR = 10^24 yoctoNEAR
-      const YOCTO_PER_NEAR = BigInt("1000000000000000000000000");
-      const YOCTO_CENT = BigInt("10000000000000000000000");
-      const yocto = BigInt(data.result.amount);
-      const whole = yocto / YOCTO_PER_NEAR;
-      const frac = (yocto % YOCTO_PER_NEAR) / YOCTO_CENT;
-      return `${whole}.${frac.toString().padStart(2, "0")}`;
-    }
-    return "0.00";
-  } catch (err) {
-    console.error("Live NEAR balance fetch error:", err);
-    return "0.00";
-  }
-}
-
 export function NearWalletProvider({ children }: { children: React.ReactNode }) {
+  const [selector, setSelector] = useState<WalletSelector | null>(null);
+  const [modal, setModal] = useState<WalletSelectorModal | null>(null);
+  const [accounts, setAccounts] = useState<Array<AccountState>>([]);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [balance, setBalance] = useState("0.00");
   const [isConnecting, setIsConnecting] = useState(false);
   const [isFetchingBalance, setIsFetchingBalance] = useState(false);
 
-  // Initialize session & check for MyNearWallet redirect callback (?account_id=...)
+  // Initialize official NEAR Wallet Selector with multi-wallet support
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search);
-      const returnedAccount = urlParams.get("account_id");
+    let isMounted = true;
 
-      if (returnedAccount && isValidNearAccountId(returnedAccount)) {
-        setAccountId(returnedAccount);
-        localStorage.setItem("paysure_near_account", returnedAccount);
-        // Clean URL params without page reload
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, newUrl);
-        return;
-      }
+    async function initWalletSelector() {
+      try {
+        const _selector = await setupWalletSelector({
+          network: "testnet",
+          modules: [
+            setupMyNearWallet(),
+            setupHereWallet(),
+            setupMeteorWallet(),
+            setupNightly(),
+            setupSender(),
+          ],
+        });
 
-      // Restore from localStorage
-      const saved = localStorage.getItem("paysure_near_account");
-      if (saved && isValidNearAccountId(saved)) {
-        setAccountId(saved);
+        const _modal = setupModal(_selector, {
+          contractId: "paysure.testnet",
+          description: "Connect your NEAR wallet to manage institutional invoices, guardrails & Confirmation of Payee.",
+        });
+
+        if (!isMounted) return;
+
+        const state = _selector.store.getState();
+        setSelector(_selector);
+        setModal(_modal);
+        setAccounts(state.accounts);
+
+        // Find active account
+        const active = state.accounts.find((a) => a.active) || state.accounts[0];
+        if (active) {
+          setAccountId(active.accountId);
+        }
+
+        // Subscribe to wallet/account state changes
+        _selector.store.observable.subscribe((nextState) => {
+          if (!isMounted) return;
+          setAccounts(nextState.accounts);
+          const currentActive = nextState.accounts.find((a) => a.active) || nextState.accounts[0];
+          setAccountId(currentActive ? currentActive.accountId : null);
+        });
+      } catch (err) {
+        console.error("NEAR Wallet Selector initialization error:", err);
       }
     }
+
+    initWalletSelector();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Fetch live balance on account change
-  useEffect(() => {
-    if (accountId) {
-      refreshBalance();
-    }
-  }, [accountId]);
-
-  const refreshBalance = async () => {
+  const refreshBalance = useCallback(async () => {
     if (!accountId) return;
     setIsFetchingBalance(true);
     try {
-      const liveBal = await queryLiveNearBalance(accountId);
-      setBalance(liveBal);
-    } finally {
-      setIsFetchingBalance(false);
-    }
-  };
-
-  const connect = async (customAccountId?: string) => {
-    if (!customAccountId) {
-      connectMyNearWallet();
-      return;
-    }
-    const target = customAccountId.trim();
-    if (!isValidNearAccountId(target)) {
-      alert("Invalid NEAR account format. Example: alice.testnet");
-      return;
-    }
-    setIsConnecting(true);
-    try {
-      // Query real on-chain account data
       const res = await fetch(NEAR_CONFIG.nodeUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jsonrpc: "2.0",
-          id: "verify-exists",
+          id: "live-near-balance",
           method: "query",
           params: {
             request_type: "view_account",
             finality: "final",
-            account_id: target,
+            account_id: accountId,
           },
         }),
       });
-      const d = await res.json();
-      if (d.error) {
-        alert(`Account '${target}' does not exist on NEAR Testnet! Please use an active testnet account or connect via MyNearWallet.`);
-        setIsConnecting(false);
-        return;
+      const data = await res.json();
+      if (data.result?.amount) {
+        const formatted = parseFloat(utils.format.formatNearAmount(data.result.amount)).toFixed(2);
+        setBalance(formatted);
       }
-      const liveBal = await queryLiveNearBalance(target);
-      setAccountId(target);
-      localStorage.setItem("paysure_near_account", target);
-      setBalance(liveBal);
-    } catch (e: any) {
-      alert(`Network error querying NEAR Testnet: ${e.message}`);
+    } catch (err) {
+      console.error("Live balance fetch error:", err);
     } finally {
-      setIsConnecting(false);
+      setIsFetchingBalance(false);
     }
-  };
+  }, [accountId]);
 
-  const connectMyNearWallet = () => {
-    if (typeof window === "undefined") return;
-    const currentUrl = window.location.href;
-    const loginUrl = `${NEAR_CONFIG.walletUrl}/login/?success_url=${encodeURIComponent(
-      currentUrl
-    )}&failure_url=${encodeURIComponent(currentUrl)}`;
-    window.location.href = loginUrl;
-  };
+  useEffect(() => {
+    if (accountId) {
+      refreshBalance();
+    }
+  }, [accountId, refreshBalance]);
 
-  const disconnect = () => {
-    setAccountId(null);
-    setBalance("0.00");
-    localStorage.removeItem("paysure_near_account");
-  };
+  const connect = useCallback(() => {
+    if (modal) {
+      modal.show();
+    }
+  }, [modal]);
+
+  const disconnect = useCallback(async () => {
+    if (!selector) return;
+    try {
+      const wallet = await selector.wallet();
+      await wallet.signOut();
+      setAccountId(null);
+      setBalance("0.00");
+    } catch (err) {
+      console.error("Error signing out:", err);
+    }
+  }, [selector]);
+
+  // Execute live on-chain payment via the connected wallet
+  const sendNearPayment = useCallback(
+    async (recipient: string, amount: string): Promise<string> => {
+      if (!selector) throw new Error("NEAR Wallet Selector not initialized.");
+      const wallet = await selector.wallet();
+      const depositYocto = utils.format.parseNearAmount(amount) || "0";
+
+      const outcome = await wallet.signAndSendTransaction({
+        receiverId: recipient,
+        actions: [
+          actionCreators.transfer(BigInt(depositYocto)),
+        ],
+      });
+
+      let txHash = "";
+      if (typeof outcome === "string") {
+        txHash = outcome;
+      } else if (outcome && typeof outcome === "object") {
+        txHash =
+          (outcome as any).transaction?.hash ||
+          (outcome as any).transaction_outcome?.id ||
+          "";
+      }
+
+      await refreshBalance();
+      return txHash;
+    },
+    [selector, refreshBalance]
+  );
 
   return (
     <NearWalletContext.Provider
       value={{
+        selector,
+        modal,
+        accounts,
         accountId,
         isConnected: !!accountId,
         balance,
         networkId: NEAR_CONFIG.networkId,
         connect,
-        connectMyNearWallet,
         disconnect,
+        sendNearPayment,
         refreshBalance,
         isConnecting,
         isFetchingBalance,

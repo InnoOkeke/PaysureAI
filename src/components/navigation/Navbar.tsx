@@ -29,15 +29,12 @@ export function Navbar() {
     isConnected, 
     balance, 
     connect, 
-    connectMyNearWallet, 
     disconnect, 
     refreshBalance, 
     isConnecting, 
     isFetchingBalance 
   } = useNearWallet();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [customInputOpen, setCustomInputOpen] = useState(false);
-  const [customInput, setCustomInput] = useState("");
 
   const navLinks = [
     { name: "Dashboard", href: "/dashboard", icon: Layers },
@@ -47,15 +44,6 @@ export function Navbar() {
     { name: "Recipients", href: "/recipients", icon: Users },
     { name: "History", href: "/history", icon: History },
   ];
-
-  const handleCustomConnect = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (customInput.trim()) {
-      connect(customInput.trim());
-      setCustomInputOpen(false);
-      setCustomInput("");
-    }
-  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-navy-800/80 bg-navy-950/80 backdrop-blur-md">
@@ -115,13 +103,13 @@ export function Navbar() {
           {!isConnected ? (
             <div className="flex items-center gap-2">
               <button
-                onClick={() => connectMyNearWallet()}
+                onClick={() => connect()}
                 disabled={isConnecting}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white shadow-md shadow-brand-600/30 transition-all active:scale-[0.98] disabled:opacity-50"
-                title="Connect via official MyNearWallet testnet"
+                title="Connect any NEAR wallet (HOT, Nightly, Meteor, MyNearWallet, Sender)"
               >
                 <Wallet className="h-4 w-4" />
-                <span>{isConnecting ? "Connecting MyNearWallet..." : "Connect NEAR Wallet"}</span>
+                <span>Connect NEAR Wallet</span>
               </button>
             </div>
           ) : (
@@ -178,29 +166,15 @@ export function Navbar() {
                     </a>
 
                     <button
-                      onClick={() => setCustomInputOpen(!customInputOpen)}
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        connect();
+                      }}
                       className="w-full flex items-center justify-between p-2 rounded-lg text-xs text-brand-300 hover:bg-navy-800 transition-colors"
                     >
-                      <span>Switch NEAR Account ID</span>
+                      <span>Switch / Connect Another Wallet</span>
+                      <Wallet className="h-3.5 w-3.5 text-brand-400" />
                     </button>
-
-                    {customInputOpen && (
-                      <form onSubmit={handleCustomConnect} className="p-2 space-y-1.5">
-                        <input
-                          type="text"
-                          value={customInput}
-                          onChange={(e) => setCustomInput(e.target.value)}
-                          placeholder="e.g. alice.testnet"
-                          className="w-full bg-navy-950 border border-navy-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 font-mono"
-                        />
-                        <button
-                          type="submit"
-                          className="w-full py-1 rounded-md bg-brand-600 text-white text-[11px] font-semibold"
-                        >
-                          Switch Account
-                        </button>
-                      </form>
-                    )}
 
                     <button
                       onClick={() => {

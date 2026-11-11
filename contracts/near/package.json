@@ -1,0 +1,23 @@
+{
+  "name": "paysure-near-contracts",
+  "version": "1.0.0",
+  "description": "PaySure AI Confirmation of Payee & Autonomous Invoicing Smart Contract on NEAR Protocol",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "near-sdk-js build src/index.ts build/paysure_contract.wasm",
+    "deploy:testnet": "near deploy --wasmFile build/paysure_contract.wasm --networkId testnet"
+  },
+  "keywords": [
+    "near",
+    "smart-contract",
+    "confirmation-of-payee",
+    "ai-agent",
+    "intents"
+  ],
+  "author": "PaySure AI",
+  "license": "MIT",
+  "devDependencies": {
+    "near-sdk-js": "^2.0.0"
+  }
+}
+

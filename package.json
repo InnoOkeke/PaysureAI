@@ -9,9 +9,7 @@
     "lint": "next lint",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
-    "compile:contracts": "hardhat compile",
-    "test:contracts": "hardhat test",
-    "deploy:contracts": "hardhat run scripts/deploy.js --network aevum"
+    "build:contract": "cd contracts/near && npm run build"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

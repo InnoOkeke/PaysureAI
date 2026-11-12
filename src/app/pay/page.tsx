@@ -1,25 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { 
   Send, 
   ShieldCheck, 
   AlertTriangle, 
   Wallet, 
   CheckCircle2, 
-  FileText, 
   ExternalLink,
   Loader2, 
   ArrowRight,
-  Receipt,
   Download,
-  Sparkles,
   Zap,
   Globe,
-  Cpu,
   Check,
-  RotateCcw
+  Lock,
+  Terminal
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import jsPDF from "jspdf";
@@ -29,17 +26,17 @@ import { formatCurrency } from "@/lib/utils";
 
 export default function PayPage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const invoiceIdParam = searchParams.get("invoiceId");
   const recipientParam = searchParams.get("recipient");
+  const amountParam = searchParams.get("amount");
+  const promptParam = searchParams.get("prompt");
   const txHashParam = searchParams.get("transactionHashes");
-  const errorCodeParam = searchParams.get("errorCode");
 
-  const { accountId, isConnected, balance, connect, sendNearPayment, isConnecting } = useNearWallet();
+  const { accountId, isConnected, balance, connect, sendNearPayment } = useNearWallet();
 
   // Workflow states
   const [recipient, setRecipient] = useState(recipientParam || "");
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState(amountParam || "");
   const [tokenSymbol, setTokenSymbol] = useState("NEAR");
   const [invoiceReference, setInvoiceReference] = useState("");
   const [invoiceId, setInvoiceId] = useState(invoiceIdParam || "");
@@ -56,7 +53,7 @@ export default function PayPage() {
   const [receiptData, setReceiptData] = useState<any>(null);
 
   // Conversational Intent states
-  const [intentInput, setIntentInput] = useState("");
+  const [intentInput, setIntentInput] = useState(promptParam || "");
   const [isResolvingIntent, setIsResolvingIntent] = useState(false);
   const [resolvedIntent, setResolvedIntent] = useState<any>(null);
   const [intentError, setIntentError] = useState<string | null>(null);
@@ -102,7 +99,7 @@ export default function PayPage() {
     checkPayee(resolvedIntent.resolvedPayee.accountId, resolvedIntent.resolvedPayee.displayName);
   };
 
-  // Pre-fill from invoice if param present
+  // Pre-fill from invoice or URL params
   useEffect(() => {
     if (invoiceIdParam) {
       fetch(`/api/invoices`)
@@ -121,7 +118,10 @@ export default function PayPage() {
     } else if (recipientParam) {
       checkPayee(recipientParam);
     }
-  }, [invoiceIdParam, recipientParam]);
+    if (promptParam) {
+      handleResolveIntent(promptParam);
+    }
+  }, [invoiceIdParam, recipientParam, promptParam]);
 
   // Handle return callback from MyNearWallet after signing real on-chain transaction
   useEffect(() => {
@@ -185,7 +185,6 @@ export default function PayPage() {
       amount
     )}&invoiceId=${encodeURIComponent(invoiceId || "")}`;
 
-    // MyNearWallet testnet send-money link
     const walletUrl = `${NEAR_CONFIG.walletUrl}/send-money?recipient=${encodeURIComponent(
       recipient
     )}&amount=${encodeURIComponent(amount)}&redirect_url=${encodeURIComponent(redirectUrl)}`;
@@ -240,7 +239,6 @@ export default function PayPage() {
 
     setIsExecuting(true);
     try {
-      // Live on-chain signing via the connected wallet (MyNearWallet, HOT, Nightly, Meteor, Sender, etc.)
       const txHash = await sendNearPayment(recipient, amount);
 
       const res = await fetch("/api/payments", {
@@ -328,12 +326,12 @@ export default function PayPage() {
 
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 150, 80);
-    doc.text("✓ Confirmation of Payee: IDENTITY MATCHED & VERIFIED", 14, 118);
+    doc.text("Confirmation of Payee: IDENTITY MATCHED & VERIFIED", 14, 118);
 
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100);
     doc.text(
-      "This transaction was validated by the PaySure AI Risk Sentinel and settled via NEAR Protocol.",
+      "This transaction was validated by PaySure AI and settled via NEAR Protocol.",
       14,
       126
     );
@@ -342,46 +340,46 @@ export default function PayPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070B14] py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-navy-800">
+    <div className="min-h-screen bg-[#050507] py-10 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto space-y-8">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-white/[0.08]">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-brand-400">
-              Confirmation of Payee
-            </span>
-            <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
-            <span className="text-xs text-slate-400">NEAR Protocol</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <span className="text-xs font-semibold uppercase tracking-wider text-brand-400 block mb-1">
+            Confirmation of Payee &amp; Multi-Chain Intents
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
             Send Verified Payment
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Never send crypto blindly. Verify recipient identity before executing transfers.
+            Verify recipient identity on-chain and check autonomous treasury guardrails before signing.
           </p>
         </div>
 
-        {/* Step Indicator */}
-        <div className="flex items-center gap-2 bg-navy-900 border border-navy-800 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+        {/* Segmented Step Indicator */}
+        <div className="inline-flex items-center gap-1 p-1 rounded-full bg-white/[0.03] border border-white/[0.08] self-start sm:self-auto whitespace-nowrap">
           <span
-            className={`text-xs font-bold px-2 py-0.5 rounded-md ${
-              step === 1 ? "bg-brand-600 text-white" : "text-slate-400"
+            className={`text-xs font-medium px-3.5 py-1.5 rounded-full transition-all ${
+              step === 1
+                ? "bg-brand-600 text-white shadow-sm"
+                : "text-slate-400"
             }`}
           >
             1. Details
           </span>
-          <span className="text-slate-600">&rarr;</span>
           <span
-            className={`text-xs font-bold px-2 py-0.5 rounded-md ${
-              step === 2 ? "bg-brand-600 text-white" : "text-slate-400"
+            className={`text-xs font-medium px-3.5 py-1.5 rounded-full transition-all ${
+              step === 2
+                ? "bg-brand-600 text-white shadow-sm"
+                : "text-slate-400"
             }`}
           >
-            2. Verify & Sign
+            2. Verify &amp; Sign
           </span>
-          <span className="text-slate-600">&rarr;</span>
           <span
-            className={`text-xs font-bold px-2 py-0.5 rounded-md ${
-              step === 3 ? "bg-emerald-600 text-white" : "text-slate-400"
+            className={`text-xs font-medium px-3.5 py-1.5 rounded-full transition-all ${
+              step === 3
+                ? "bg-emerald-600 text-white shadow-sm"
+                : "text-slate-400"
             }`}
           >
             3. Receipt
@@ -389,33 +387,36 @@ export default function PayPage() {
         </div>
       </div>
 
-      {/* STEP 1: Enter Details */}
+      {/* STEP 1: Enter Details (2-Column Terminal Layout) */}
       {step === 1 && (
-        <div className="space-y-6">
-          {/* Natural Language Intent Resolver Box */}
-          <div className="rounded-2xl border border-brand-500/30 bg-gradient-to-br from-navy-900/90 via-navy-950 to-brand-950/20 p-6 shadow-xl space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-white">Conversational Intent Resolver</h3>
-                    <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-brand-500/10 border border-brand-500/30 text-brand-300">
-                      NEAR Intents & MPC Chain Signatures
-                    </span>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Left Column (7 Cols): Intent Bar + Payment Configuration Form */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            {/* Conversational Intent Resolver Card */}
+            <div className="rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 sm:p-7 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400 shrink-0">
+                    <Terminal className="h-4 w-4" />
                   </div>
-                  <p className="text-xs text-slate-400">
-                    Type a payment prompt across NEAR or EVM chains. PaySure checks Confirmation of Payee and Autonomous Treasury rules.
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-white">Conversational Intent Resolver</h3>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-slate-300">
+                        Chain Signatures MPC
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Express a payment in plain English to auto-fill recipient, asset, and target network.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Input Bar */}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="relative flex-1">
+              {/* Input Bar */}
+              <div className="flex flex-col sm:flex-row gap-2.5">
                 <input
                   type="text"
                   value={intentInput}
@@ -427,376 +428,400 @@ export default function PayPage() {
                     }
                   }}
                   placeholder='e.g. "Send $50 to John Kennedy on Base" or "Pay Acme Design 75 NEAR"'
-                  className="w-full bg-navy-950 border border-navy-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 transition-colors"
+                  className="flex-1 bg-white/[0.02] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
                 />
+                <button
+                  type="button"
+                  onClick={() => handleResolveIntent()}
+                  disabled={isResolvingIntent || !intentInput.trim()}
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white text-xs font-semibold transition-all shrink-0 whitespace-nowrap"
+                >
+                  {isResolvingIntent ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Resolving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-3.5 w-3.5" />
+                      <span>Resolve Intent</span>
+                    </>
+                  )}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => handleResolveIntent()}
-                disabled={isResolvingIntent || !intentInput.trim()}
-                className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-brand-600/30 transition-all shrink-0"
-              >
-                {isResolvingIntent ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Resolving Intent...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    <span>Resolve Intent</span>
-                  </>
-                )}
-              </button>
-            </div>
 
-            {/* Sample Intent Chips */}
-            <div className="space-y-1.5">
-              <span className="text-[11px] font-semibold text-slate-400">Quick Prompt Examples:</span>
-              <div className="flex flex-wrap gap-2">
+              {/* Sample Intent Pills */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 {sampleIntents.map((chip, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => handleResolveIntent(chip)}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-navy-950/80 hover:bg-navy-800 border border-navy-800 text-slate-300 hover:text-white transition-all flex items-center gap-1.5"
+                    className="text-[11px] px-3 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.07] border border-white/[0.07] text-slate-300 hover:text-white transition-all whitespace-nowrap"
                   >
-                    <Zap className="h-3 w-3 text-brand-400" />
-                    <span>{chip}</span>
+                    {chip}
                   </button>
                 ))}
               </div>
-            </div>
 
-            {/* Intent Error Message */}
-            {intentError && (
-              <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
-                <span>{intentError}</span>
-              </div>
-            )}
+              {/* Intent Error */}
+              {intentError && (
+                <div className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
+                  <span>{intentError}</span>
+                </div>
+              )}
 
-            {/* Resolved Intent Card */}
-            {resolvedIntent && (
-              <div className="rounded-xl border border-emerald-500/40 bg-navy-950/90 p-4 space-y-3.5 mt-2 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between border-b border-navy-800 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs font-bold text-emerald-300">Intent Successfully Resolved</span>
+              {/* Resolved Intent Preview */}
+              {resolvedIntent && (
+                <div className="rounded-2xl border border-emerald-500/30 bg-white/[0.02] p-4 space-y-3.5 pt-4">
+                  <div className="flex items-center justify-between border-b border-white/[0.06] pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                      <span className="text-xs font-semibold text-emerald-300">Intent Resolved</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-white/[0.05] text-slate-300">
+                        {resolvedIntent.settlementExecution.settlementRail}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setResolvedIntent(null)}
+                        className="text-slate-400 hover:text-white text-xs"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">
-                      Rail: {resolvedIntent.settlementExecution.settlementRail}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="bg-white/[0.02] p-3 rounded-xl border border-white/[0.06]">
+                      <span className="text-slate-400 block text-[11px]">Target Network</span>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <Globe className="h-3.5 w-3.5 text-brand-400" />
+                        <span className="font-semibold text-white">{resolvedIntent.targetChain}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/[0.02] p-3 rounded-xl border border-white/[0.06]">
+                      <span className="text-slate-400 block text-[11px]">Parsed Amount</span>
+                      <span className="font-mono font-semibold text-emerald-400 mt-1 block">
+                        ${resolvedIntent.extractedAmount.toFixed(2)} {resolvedIntent.extractedCurrency}
+                      </span>
+                    </div>
+
+                    <div className="bg-white/[0.02] p-3 rounded-xl border border-white/[0.06]">
+                      <span className="text-slate-400 block text-[11px]">Resolved Payee</span>
+                      <span className="font-semibold text-white truncate mt-1 block">
+                        {resolvedIntent.resolvedPayee.displayName}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400 block truncate">
+                        {resolvedIntent.resolvedPayee.accountId}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[11px] text-slate-400">
+                      Trust Score: <strong className="text-white">{resolvedIntent.resolvedPayee.reputationScore}/100</strong>
                     </span>
                     <button
                       type="button"
-                      onClick={() => setResolvedIntent(null)}
-                      className="text-slate-400 hover:text-white text-xs"
+                      onClick={handleApplyResolvedIntent}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all"
                     >
-                      Dismiss
+                      <Check className="h-3.5 w-3.5" />
+                      <span>Apply to Transfer Form</span>
                     </button>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                  <div className="bg-navy-900/80 p-3 rounded-lg border border-navy-800">
-                    <span className="text-slate-400 block text-[11px]">Destination Chain</span>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <Globe className="h-4 w-4 text-brand-400" />
-                      <span className="font-bold text-white text-sm">{resolvedIntent.targetChain}</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-navy-900/80 p-3 rounded-lg border border-navy-800">
-                    <span className="text-slate-400 block text-[11px]">Parsed Amount</span>
-                    <span className="font-mono font-bold text-emerald-400 text-sm mt-1 block">
-                      ${resolvedIntent.extractedAmount.toFixed(2)} {resolvedIntent.extractedCurrency}
-                    </span>
-                  </div>
-
-                  <div className="bg-navy-900/80 p-3 rounded-lg border border-navy-800">
-                    <span className="text-slate-400 block text-[11px]">Payee Confirmation</span>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                      <span className="font-semibold text-slate-200 truncate">
-                        {resolvedIntent.resolvedPayee.displayName}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-mono text-slate-400 block truncate">
-                      {resolvedIntent.resolvedPayee.targetChainAddress}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Policy Guardrails Status Box */}
-                <div className={`p-3 rounded-lg border text-xs flex items-start gap-2.5 ${
-                  resolvedIntent.policyCheck.autoExecutable
-                    ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-300"
-                    : "bg-amber-950/20 border-amber-500/30 text-amber-300"
-                }`}>
-                  {resolvedIntent.policyCheck.autoExecutable ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                  )}
-                  <div className="space-y-0.5 text-[11px]">
-                    <span className="font-bold block">
-                      {resolvedIntent.policyCheck.autoExecutable
-                        ? "Autonomous Business Guardrail: APPROVED"
-                        : "Security Policy Flag: Human Signoff Required"}
-                    </span>
-                    <span className="text-slate-300 block">
-                      Trust Score: {resolvedIntent.resolvedPayee.reputationScore}/100 • Daily Velocity Cap: Compliant
-                      {resolvedIntent.policyCheck.violations.length > 0 && ` • Warning: ${resolvedIntent.policyCheck.violations.join(", ")}`}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Apply Button */}
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="button"
-                    onClick={handleApplyResolvedIntent}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/30"
-                  >
-                    <Check className="h-3.5 w-3.5" />
-                    <span>Apply & Auto-Fill Payment Details</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-navy-800 w-full" />
-            <span className="absolute bg-[#070B14] px-4 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-              Or Configure Payment Manually
-            </span>
-          </div>
-
-          <form
-            onSubmit={handleProceedToReview}
-            className="rounded-2xl bg-navy-900/80 border border-navy-800 p-6 sm:p-8 space-y-6 shadow-xl"
-          >
-          {/* Recipient Account Input */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                Recipient NEAR Account ID
-              </label>
-            </div>
-
-            <div className="relative">
-              <input
-                type="text"
-                value={recipient}
-                onChange={(e) => {
-                  setRecipient(e.target.value);
-                  if (isValidNearAccountId(e.target.value)) {
-                    checkPayee(e.target.value);
-                  }
-                }}
-                placeholder="e.g. acme-design.testnet or satoshi.near"
-                className="w-full bg-navy-950 border border-navy-800 rounded-xl px-4 py-3 text-sm text-white font-mono placeholder-slate-600 focus:outline-none focus:border-brand-500 transition-colors"
-                required
-              />
-              {verifying && (
-                <div className="absolute right-3 top-3.5 flex items-center gap-1.5 text-xs text-slate-400">
-                  <Loader2 className="h-4 w-4 animate-spin text-brand-400" />
-                  <span>Checking NEAR Registry...</span>
-                </div>
               )}
             </div>
-            <p className="text-[11px] text-slate-400">
-              Enter a human-readable NEAR Account ID. PaySure AI will verify the identity match against the on-chain registry.
-            </p>
-          </div>
 
-          {/* Payee Verification Badge Preview */}
-          {verification && (
-            <div
-              className={`p-4 rounded-xl border flex items-start gap-3 transition-all ${
-                verification.status === "VERIFIED"
-                  ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-300"
-                  : verification.status === "WARNING"
-                  ? "bg-amber-950/20 border-amber-500/30 text-amber-300"
-                  : "bg-rose-950/20 border-rose-500/30 text-rose-300"
-              }`}
+            {/* Direct Payment Form Card */}
+            <form
+              onSubmit={handleProceedToReview}
+              className="rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 sm:p-8 space-y-6 shadow-xl"
             >
-              {verification.status === "VERIFIED" ? (
-                <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
-              ) : (
-                <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-              )}
-              <div className="space-y-1 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">
-                    {verification.status === "VERIFIED"
-                      ? "Payee Verified & Identity Matched"
-                      : verification.status === "WARNING"
-                      ? "Security Advisory Flag"
-                      : "Unregistered or High Risk"}
-                  </span>
-                  <span className="font-mono text-[10px] uppercase px-1.5 py-0.2 rounded bg-black/30">
-                    {verification.status}
-                  </span>
-                </div>
-                {verification.recipient && (
-                  <p className="text-slate-300">
-                    Registered to: <strong>{verification.recipient.displayName}</strong> (Payment ID:{" "}
-                    <code>{verification.recipient.paymentId}</code>)
-                  </p>
-                )}
-                {verification.reason && <p className="text-slate-400 italic">{verification.reason}</p>}
+              <div className="border-b border-white/[0.06] pb-4">
+                <h3 className="text-base font-semibold text-white">Transfer Parameters</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Configure recipient account, settlement amount, and optional invoice reference.
+                </p>
               </div>
-            </div>
-          )}
 
-          {/* Amount & Token */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2 space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                  Payment Amount
+              {/* Recipient Account Input */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-300 block">
+                  Recipient NEAR Account ID
                 </label>
-                {isConnected && (
-                  <span className="text-[11px] text-slate-400">
-                    Balance: <strong className="text-brand-300 font-mono">{balance} NEAR</strong>
-                  </span>
-                )}
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={recipient}
+                    onChange={(e) => {
+                      setRecipient(e.target.value);
+                      if (isValidNearAccountId(e.target.value)) {
+                        checkPayee(e.target.value);
+                      }
+                    }}
+                    placeholder="e.g. acme-design.testnet or satoshi.near"
+                    className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                    required
+                  />
+                  {verifying && (
+                    <div className="absolute right-3.5 top-3.5 flex items-center gap-1.5 text-xs text-slate-400">
+                      <Loader2 className="h-4 w-4 animate-spin text-brand-400" />
+                      <span>Verifying...</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className="w-full bg-navy-950 border border-navy-800 rounded-xl px-4 py-3 text-sm text-white font-mono placeholder-slate-600 focus:outline-none focus:border-brand-500 transition-colors"
-                required
-              />
+
+              {/* Amount & Asset */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-medium text-slate-300">
+                      Payment Amount
+                    </label>
+                    {isConnected && (
+                      <span className="text-[11px] text-slate-400">
+                        Available: <strong className="text-brand-300 font-mono">{balance} NEAR</strong>
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-300 block">
+                    Settlement Asset
+                  </label>
+                  <select
+                    value={tokenSymbol}
+                    onChange={(e) => setTokenSymbol(e.target.value)}
+                    className="w-full bg-[#0D111A] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors"
+                  >
+                    <option value="NEAR">NEAR (Native)</option>
+                    <option value="USDC">USDC (NEP-141)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Invoice Reference */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-300 block">
+                  Invoice Reference / Memo (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={invoiceReference}
+                  onChange={(e) => setInvoiceReference(e.target.value)}
+                  placeholder="e.g. INV-2026-9042 or Q4 Retainer"
+                  className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                />
+              </div>
+
+              {/* Submit Action */}
+              <div className="pt-4 border-t border-white/[0.06] flex justify-end">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/25 transition-all active:scale-[0.98]"
+                >
+                  <span>Review &amp; Verify Recipient</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Right Column (5 Cols): Live Confirmation of Payee & Security Inspector */}
+          <div className="lg:col-span-5 space-y-6">
+            
+            {/* Live Payee Verification Panel */}
+            <div className="rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 sm:p-7 space-y-5 shadow-xl">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
+                <div className="flex items-center gap-2.5">
+                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                  <h3 className="text-sm font-semibold text-white">Confirmation of Payee</h3>
+                </div>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                  Live RPC Check
+                </span>
+              </div>
+
+              {verification ? (
+                <div className="space-y-4">
+                  <div
+                    className={`p-4 rounded-2xl border flex items-start gap-3 ${
+                      verification.status === "VERIFIED"
+                        ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-300"
+                        : verification.status === "WARNING"
+                        ? "bg-amber-950/20 border-amber-500/30 text-amber-300"
+                        : "bg-rose-950/20 border-rose-500/30 text-rose-300"
+                    }`}
+                  >
+                    {verification.status === "VERIFIED" ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                    )}
+                    <div className="space-y-1 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white">
+                          {verification.status === "VERIFIED"
+                            ? "Identity Matched & Verified"
+                            : verification.status === "WARNING"
+                            ? "Security Advisory Flag"
+                            : "Unregistered or High Risk"}
+                        </span>
+                        <span className="font-mono text-[10px] uppercase px-2 py-0.5 rounded-full bg-black/40 border border-white/[0.08]">
+                          {verification.status}
+                        </span>
+                      </div>
+                      {verification.reason && (
+                        <p className="text-slate-300 leading-relaxed pt-1">{verification.reason}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {verification.recipient && (
+                    <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-2.5 text-xs font-mono">
+                      <div className="flex justify-between text-slate-400">
+                        <span>Registered Entity</span>
+                        <span className="text-white font-sans font-medium">{verification.recipient.displayName}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-400">
+                        <span>Payment ID</span>
+                        <span className="text-brand-300">{verification.recipient.paymentId}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Enter a recipient NEAR account on the left to automatically query the on-chain registry and screen for lookalike homoglyphs.
+                  </p>
+                  <div className="space-y-2.5 text-xs">
+                    {[
+                      "On-chain account existence check (NEAR RPC)",
+                      "Corporate entity name & payment ID attestation",
+                      "Levenshtein distance typosquatting defense",
+                      "Autonomous treasury velocity compliance"
+                    ].map((checkItem) => (
+                      <div key={checkItem} className="flex items-center gap-2.5 text-slate-300 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                        <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                        <span>{checkItem}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                Asset
-              </label>
-              <select
-                value={tokenSymbol}
-                onChange={(e) => setTokenSymbol(e.target.value)}
-                className="w-full bg-navy-950 border border-navy-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-500 transition-colors"
-              >
-                <option value="NEAR">NEAR (Native)</option>
-                <option value="USDC">USDC (NEP-141)</option>
-              </select>
+            {/* Active Treasury Guardrails Summary */}
+            <div className="rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 space-y-3.5 text-xs">
+              <div className="flex items-center gap-2 text-slate-300 font-semibold">
+                <Lock className="h-3.5 w-3.5 text-brand-400" />
+                <span>Active Settlement Safeguards</span>
+              </div>
+              <div className="space-y-2 font-mono text-[11px]">
+                <div className="flex justify-between py-1.5 border-b border-white/[0.05] text-slate-400">
+                  <span>Single-Tx Policy Limit</span>
+                  <span className="text-white">200.00 NEAR ($500)</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-white/[0.05] text-slate-400">
+                  <span>Consensus Finality</span>
+                  <span className="text-emerald-400">~1.1s (Nightshade 2.0)</span>
+                </div>
+                <div className="flex justify-between py-1.5 text-slate-400">
+                  <span>Custody Model</span>
+                  <span className="text-slate-200">Non-Custodial Wallet Sign</span>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Invoice Reference */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-              Invoice Reference / Memo (Optional)
-            </label>
-            <input
-              type="text"
-              value={invoiceReference}
-              onChange={(e) => setInvoiceReference(e.target.value)}
-              placeholder="e.g. INV-2026-9042 or Q4 Audit"
-              className="w-full bg-navy-950 border border-navy-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 transition-colors"
-            />
           </div>
-
-          {/* Continue Button */}
-          <div className="pt-4 border-t border-navy-800 flex justify-end">
-            <button
-              type="submit"
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-600/30 transition-all active:scale-[0.98]"
-            >
-              <span>Review & Verify Recipient</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
       )}
 
       {/* STEP 2: Review & Sign */}
       {step === 2 && (
-        <div className="rounded-2xl bg-navy-900/80 border border-navy-800 p-6 sm:p-8 space-y-6 shadow-xl">
-          <div className="border-b border-navy-800 pb-4">
+        <div className="max-w-2xl mx-auto rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 sm:p-9 space-y-6 shadow-2xl">
+          <div className="border-b border-white/[0.06] pb-4">
             <h3 className="text-lg font-bold text-white">Review Verified Settlement</h3>
             <p className="text-xs text-slate-400 mt-1">
-              Confirm recipient identity and payment parameters before signing.
+              Confirm recipient identity and payment parameters before signing with your wallet.
             </p>
           </div>
 
-          {/* Security Alert if mismatch or warning */}
           {verification?.status === "MISMATCH" && (
-            <div className="p-4 rounded-xl bg-rose-950/30 border border-rose-500/50 flex items-start gap-3 text-rose-300 text-xs">
+            <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-500/40 flex items-start gap-3 text-rose-300 text-xs">
               <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0" />
               <div>
                 <p className="font-bold">CRITICAL WARNING: Account Mismatch Detected</p>
                 <p className="mt-1 text-slate-300">
-                  The recipient NEAR account does not match the registered legal identity for this invoice. Funds may be sent to an unverified or spoofed account.
+                  The recipient NEAR account does not match the registered legal identity for this invoice.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Summary Box */}
-          <div className="rounded-xl bg-navy-950/80 border border-navy-800/80 p-5 space-y-3.5 text-xs">
-            <div className="flex justify-between items-center py-1 border-b border-navy-800/60">
-              <span className="text-slate-400">Recipient Account ID:</span>
+          <div className="rounded-2xl bg-white/[0.02] border border-white/[0.07] p-5 space-y-3.5 text-xs">
+            <div className="flex justify-between items-center py-1.5 border-b border-white/[0.06]">
+              <span className="text-slate-400">Recipient Account ID</span>
               <span className="font-mono font-bold text-white text-sm">{recipient}</span>
             </div>
 
             {verification?.recipient && (
-              <div className="flex justify-between items-center py-1 border-b border-navy-800/60">
-                <span className="text-slate-400">Verified Legal Name:</span>
+              <div className="flex justify-between items-center py-1.5 border-b border-white/[0.06]">
+                <span className="text-slate-400">Verified Legal Name</span>
                 <span className="font-semibold text-emerald-400">{verification.recipient.displayName}</span>
               </div>
             )}
 
-            <div className="flex justify-between items-center py-1 border-b border-navy-800/60">
-              <span className="text-slate-400">Total Settlement Amount:</span>
-              <span className="font-mono font-extrabold text-brand-300 text-base">
+            <div className="flex justify-between items-center py-1.5 border-b border-white/[0.06]">
+              <span className="text-slate-400">Total Settlement Amount</span>
+              <span className="font-mono font-bold text-brand-300 text-base">
                 {formatCurrency(amount)} {tokenSymbol}
               </span>
             </div>
 
-            <div className="flex justify-between items-center py-1 border-b border-navy-800/60">
-              <span className="text-slate-400">Settlement Network:</span>
+            <div className="flex justify-between items-center py-1.5 border-b border-white/[0.06]">
+              <span className="text-slate-400">Settlement Network</span>
               <span className="font-semibold text-slate-200">
-                {resolvedIntent ? `${resolvedIntent.targetChain} (${resolvedIntent.settlementExecution.settlementRail})` : "NEAR Protocol (Testnet)"}
+                {resolvedIntent ? `${resolvedIntent.targetChain} (${resolvedIntent.settlementExecution.settlementRail})` : "NEAR Protocol"}
               </span>
             </div>
 
             {resolvedIntent?.settlementExecution?.mpcSignerDerivation && (
-              <div className="flex justify-between items-center py-1 border-b border-navy-800/60">
-                <span className="text-slate-400">NEAR MPC Derived Address:</span>
+              <div className="flex justify-between items-center py-1.5 border-b border-white/[0.06]">
+                <span className="text-slate-400">NEAR MPC Derived Address</span>
                 <span className="font-mono text-[11px] text-brand-300 truncate max-w-[260px]">
                   {resolvedIntent.settlementExecution.mpcSignerDerivation}
                 </span>
               </div>
             )}
 
-            {resolvedIntent?.policyCheck && (
-              <div className="flex justify-between items-center py-1 border-b border-navy-800/60">
-                <span className="text-slate-400">Autonomous Treasury Guardrail:</span>
-                <span className={`font-semibold ${resolvedIntent.policyCheck.autoExecutable ? "text-emerald-400" : "text-amber-400"}`}>
-                  {resolvedIntent.policyCheck.autoExecutable ? "✓ Autonomous Execution Approved" : "⚠ Manual Human Signoff Required"}
-                </span>
-              </div>
-            )}
-
-            <div className="flex justify-between items-center py-1">
-              <span className="text-slate-400">Invoice / Memo Reference:</span>
+            <div className="flex justify-between items-center py-1.5">
+              <span className="text-slate-400">Invoice / Memo Reference</span>
               <span className="font-mono text-slate-300">{invoiceReference || "Direct Transfer"}</span>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="pt-4 border-t border-navy-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="pt-4 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-3">
             <button
               onClick={() => setStep(1)}
               className="text-xs text-slate-400 hover:text-white order-2 sm:order-1"
@@ -805,33 +830,31 @@ export default function PayPage() {
             </button>
 
             {!isConnected ? (
-              <div className="flex items-center gap-2 order-1 sm:order-2">
-                <button
-                  type="button"
-                  onClick={() => connect()}
-                  className="flex items-center gap-1.5 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-600/30 transition-all active:scale-[0.98]"
-                >
-                  <Wallet className="h-4 w-4" />
-                  <span>Connect NEAR Wallet to Sign</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => connect()}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/25 transition-all order-1 sm:order-2"
+              >
+                <Wallet className="h-4 w-4" />
+                <span>Connect NEAR Wallet to Sign</span>
+              </button>
             ) : (
               <div className="flex flex-wrap items-center gap-2.5 order-1 sm:order-2">
                 <button
                   type="button"
                   onClick={handleExecutePayment}
                   disabled={isExecuting}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all active:scale-[0.98]"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-emerald-600/25 transition-all"
                 >
                   {isExecuting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Signing Transaction on NEAR Testnet...</span>
+                      <span>Signing Transaction...</span>
                     </>
                   ) : (
                     <>
                       <Wallet className="h-4 w-4" />
-                      <span>Sign & Transfer with {accountId} (Live Testnet)</span>
+                      <span>Sign &amp; Transfer ({accountId})</span>
                     </>
                   )}
                 </button>
@@ -839,7 +862,7 @@ export default function PayPage() {
                 <button
                   type="button"
                   onClick={handlePayWithMyNearWallet}
-                  className="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-navy-800 hover:bg-navy-750 text-slate-300 border border-navy-700 text-xs font-medium transition-all"
+                  className="inline-flex items-center gap-1.5 px-4 py-3 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.08] text-xs font-medium transition-all"
                   title="Or transfer directly via MyNearWallet web"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -853,45 +876,44 @@ export default function PayPage() {
 
       {/* STEP 3: Completed Receipt */}
       {step === 3 && receiptData && (
-        <div className="rounded-2xl bg-navy-900/90 border border-emerald-500/30 p-6 sm:p-8 space-y-6 shadow-2xl">
+        <div className="max-w-2xl mx-auto rounded-3xl bg-[#090B10] border border-emerald-500/30 p-6 sm:p-9 space-y-6 shadow-2xl">
           <div className="text-center space-y-2">
-            <div className="inline-flex p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 mb-2">
-              <CheckCircle2 className="h-8 w-8" />
+            <div className="inline-flex p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-1">
+              <CheckCircle2 className="h-7 w-7" />
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-white">Payment Confirmed on NEAR!</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-white">Payment Confirmed on NEAR</h2>
             <p className="text-xs text-slate-400">
-              The payment has settled on NEAR Protocol with an on-chain receipt.
+              The settlement has been finalized on-chain with a verifiable audit receipt.
             </p>
           </div>
 
-          {/* Receipt Card */}
-          <div className="rounded-xl bg-navy-950 border border-navy-800 p-5 space-y-3 text-xs">
-            <div className="flex justify-between items-center pb-2 border-b border-navy-800">
+          <div className="rounded-2xl bg-white/[0.02] border border-white/[0.07] p-5 space-y-3 text-xs">
+            <div className="flex justify-between items-center pb-2.5 border-b border-white/[0.06]">
               <span className="text-slate-400">Receipt Number</span>
               <span className="font-mono text-emerald-400 font-bold">
                 {receiptData.receipt?.receiptNumber || receiptData.id}
               </span>
             </div>
 
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center py-1">
               <span className="text-slate-400">Amount Paid</span>
               <span className="font-mono font-bold text-white text-sm">
                 {formatCurrency(receiptData.amount)} {tokenSymbol}
               </span>
             </div>
 
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center py-1">
               <span className="text-slate-400">Recipient Account</span>
               <span className="font-mono text-slate-200">{receiptData.recipientAddress}</span>
             </div>
 
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center py-1">
               <span className="text-slate-400">NEAR Transaction Hash</span>
               <a
                 href={`${NEAR_CONFIG.explorerUrl}/txns/${receiptData.transactionHash}`}
                 target="_blank"
                 rel="noreferrer"
-                className="font-mono text-brand-400 hover:text-brand-300 flex items-center gap-1"
+                className="font-mono text-brand-400 hover:text-brand-300 inline-flex items-center gap-1"
               >
                 <span>{receiptData.transactionHash.slice(0, 16)}...</span>
                 <ExternalLink className="h-3 w-3" />
@@ -899,11 +921,10 @@ export default function PayPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
             <button
               onClick={downloadPdfReceipt}
-              className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-750 text-white text-xs font-bold border border-navy-700 transition-all"
+              className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-white text-xs font-semibold border border-white/[0.08] transition-all"
             >
               <Download className="h-4 w-4" />
               <span>Download PDF Receipt</span>
@@ -917,7 +938,7 @@ export default function PayPage() {
                 setVerification(null);
                 setReceiptData(null);
               }}
-              className="w-full sm:w-auto flex-1 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition-all shadow-md shadow-brand-600/30"
+              className="w-full sm:w-auto flex-1 px-5 py-3 rounded-full bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition-all shadow-md shadow-brand-600/25"
             >
               Make Another Payment
             </button>

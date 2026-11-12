@@ -16,7 +16,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    let { displayName, paymentId, walletAddress, notes, verificationStatus } = body;
+    let { displayName, paymentId, walletAddress, evmAddress, notes, verificationStatus } = body;
 
     if (!displayName || !walletAddress) {
       return NextResponse.json(
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       cleanWallet = cleanWallet.replace(/\.tesnet$/, ".testnet");
     }
 
-    if (!cleanWallet.includes(".")) {
+    if (!cleanWallet.includes(".") && !cleanWallet.startsWith("0x")) {
       cleanWallet = `${cleanWallet}.testnet`;
     }
 
@@ -39,10 +39,16 @@ export async function POST(req: NextRequest) {
       paymentId = cleanWallet.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "");
     }
 
+    let cleanEvm = evmAddress?.trim();
+    if (cleanEvm && !cleanEvm.startsWith("0x")) {
+      cleanEvm = `0x${cleanEvm}`;
+    }
+
     const recipient = await addCounterparty({
       displayName,
       paymentId,
       walletAddress: cleanWallet,
+      evmAddress: cleanEvm,
       notes,
       verificationStatus: verificationStatus || "VERIFIED",
     });

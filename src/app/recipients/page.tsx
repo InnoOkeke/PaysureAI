@@ -28,6 +28,7 @@ export default function RecipientsPage() {
   const [regPaymentId, setRegPaymentId] = useState("");
   const [regDisplayName, setRegDisplayName] = useState("");
   const [regWallet, setRegWallet] = useState(accountId || "");
+  const [regEvmWallet, setRegEvmWallet] = useState("");
   const [registering, setRegistering] = useState(false);
 
   const [recipientsList, setRecipientsList] = useState<any[]>([]);
@@ -86,6 +87,7 @@ export default function RecipientsPage() {
           displayName: regDisplayName.trim(),
           paymentId: regPaymentId.trim() || undefined,
           walletAddress: regWallet.trim(),
+          evmAddress: regEvmWallet.trim() || undefined,
           notes: "Registered on NEAR Confirmation of Payee Directory.",
           verificationStatus: "VERIFIED",
         }),
@@ -96,6 +98,7 @@ export default function RecipientsPage() {
         setShowRegisterModal(false);
         setRegPaymentId("");
         setRegDisplayName("");
+        setRegEvmWallet("");
       } else {
         const data = await res.json();
         alert(data.error || "Failed to register recipient");
@@ -269,8 +272,14 @@ export default function RecipientsPage() {
                     {r.verificationStatus}
                   </span>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-slate-400 font-mono">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 font-mono">
                   <span>NEAR Account: {r.walletAddress}</span>
+                  {r.evmAddress && (
+                    <>
+                      <span className="text-slate-600">·</span>
+                      <span className="text-cyan-400">EVM: {r.evmAddress}</span>
+                    </>
+                  )}
                 </div>
                 {r.notes && <p className="text-[11px] text-slate-400">{r.notes}</p>}
               </div>
@@ -346,6 +355,23 @@ export default function RecipientsPage() {
                   className="w-full bg-navy-950 border border-navy-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono"
                   required
                 />
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-300">Ethereum / EVM Address (Optional)</label>
+                  <span className="text-[10px] text-cyan-400 font-mono">Chain Signatures Rail</span>
+                </div>
+                <input
+                  type="text"
+                  value={regEvmWallet}
+                  onChange={(e) => setRegEvmWallet(e.target.value)}
+                  placeholder="e.g. 0x71C8360f3a8b417c805F99D4133A89f07447d251"
+                  className="w-full bg-navy-950 border border-navy-800 rounded-xl px-3.5 py-2 text-xs text-white font-mono placeholder-slate-600 focus:outline-none focus:border-brand-500"
+                />
+                <p className="text-[10px] text-slate-500">
+                  Enables cross-chain settlement to Ethereum & Base via NEAR MPC.
+                </p>
               </div>
 
               <div className="pt-3 flex justify-end gap-3 border-t border-navy-800">

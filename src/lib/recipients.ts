@@ -81,6 +81,7 @@ export async function listAllRecipients(): Promise<CounterpartyRecord[]> {
           displayName: r.displayName,
           paymentId: r.paymentId,
           walletAddress: r.walletAddress,
+          evmAddress: r.evmAddress || undefined,
           verificationStatus: r.verificationStatus as any,
           notes: r.notes || "",
           createdAt: r.createdAt.toISOString(),
@@ -106,18 +107,21 @@ export async function addCounterparty(data: {
   displayName: string;
   paymentId: string;
   walletAddress: string;
+  evmAddress?: string;
   notes?: string;
   verificationStatus?: "VERIFIED" | "WARNING" | "UNVERIFIED" | "MISMATCH";
 }): Promise<CounterpartyRecord> {
   const store = getStore();
   const cleanAddr = data.walletAddress.trim().toLowerCase();
   const cleanPaymentId = data.paymentId.trim().toLowerCase();
+  const cleanEvm = data.evmAddress ? data.evmAddress.trim() : undefined;
 
   const newRecord: CounterpartyRecord = {
     id: `rec-${Date.now()}`,
     displayName: data.displayName.trim(),
     paymentId: cleanPaymentId,
     walletAddress: cleanAddr,
+    evmAddress: cleanEvm,
     verificationStatus: data.verificationStatus || "VERIFIED",
     notes: data.notes || "Attested corporate counterparty in PaySure Directory.",
     createdAt: new Date().toISOString(),
@@ -125,7 +129,10 @@ export async function addCounterparty(data: {
 
   // Upsert in memory store
   const existingIndex = store.findIndex(
-    (r) => r.walletAddress.toLowerCase() === cleanAddr || r.paymentId.toLowerCase() === cleanPaymentId
+    (r) =>
+      r.walletAddress.toLowerCase() === cleanAddr ||
+      r.paymentId.toLowerCase() === cleanPaymentId ||
+      (cleanEvm && r.evmAddress?.toLowerCase() === cleanEvm.toLowerCase())
   );
   if (existingIndex >= 0) {
     store[existingIndex] = { ...store[existingIndex], ...newRecord };
@@ -141,6 +148,7 @@ export async function addCounterparty(data: {
         update: {
           displayName: newRecord.displayName,
           walletAddress: cleanAddr,
+          evmAddress: cleanEvm,
           verificationStatus: newRecord.verificationStatus,
           notes: newRecord.notes,
         },
@@ -148,6 +156,7 @@ export async function addCounterparty(data: {
           displayName: newRecord.displayName,
           paymentId: cleanPaymentId,
           walletAddress: cleanAddr,
+          evmAddress: cleanEvm,
           verificationStatus: newRecord.verificationStatus,
           notes: newRecord.notes,
         },

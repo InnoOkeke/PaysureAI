@@ -23,6 +23,7 @@ model Recipient {
   user               User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   displayName        String
   walletAddress      String
+  evmAddress         String?
   paymentId          String    @unique
   verificationStatus String    @default("UNVERIFIED") // VERIFIED, WARNING, UNVERIFIED, MISMATCH
   notes              String?
@@ -31,6 +32,7 @@ model Recipient {
   invoices           Invoice[]
 
   @@index([walletAddress])
+  @@index([evmAddress])
   @@index([paymentId])
 }
 

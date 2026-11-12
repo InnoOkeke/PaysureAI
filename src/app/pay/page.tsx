@@ -763,6 +763,43 @@ export default function PayPage() {
                     </p>
                   </div>
                 )}
+
+                {/* Inline Confirmation of Payee Status Indicator */}
+                {verification && (
+                  <div
+                    className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 text-xs transition-all ${
+                      verification.status === "VERIFIED"
+                        ? "bg-emerald-950/30 border-emerald-500/30 text-emerald-300"
+                        : verification.status === "WARNING"
+                        ? "bg-amber-950/30 border-amber-500/30 text-amber-300"
+                        : "bg-rose-950/30 border-rose-500/30 text-rose-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {verification.status === "VERIFIED" ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+                      )}
+                      <div>
+                        <span className="font-semibold text-white">
+                          {verification.recipient?.displayName ||
+                            (verification.status === "VERIFIED"
+                              ? "Identity Matched"
+                              : "Unregistered Recipient")}
+                        </span>
+                        {verification.recipient?.paymentId && (
+                          <span className="text-[10px] text-slate-400 ml-1.5 font-mono">
+                            ({verification.recipient.paymentId})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-black/40 border border-white/[0.08] uppercase">
+                      {verification.status}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Amount & Asset */}
@@ -832,10 +869,32 @@ export default function PayPage() {
             </form>
           </div>
 
-          {/* Right Column (5 Cols): Live Confirmation of Payee & Security Inspector */}
-          <div className="lg:col-span-5 space-y-6">
+          {/* Right Column (5 Cols): Live Confirmation of Payee & Security Inspector (Sticky) */}
+          <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24 h-fit">
             
-            {/* Live Payee Verification Panel */}
+            {/* Active Treasury Guardrails Summary */}
+            <div className="rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 space-y-3.5 text-xs shadow-xl">
+              <div className="flex items-center gap-2 text-slate-300 font-semibold">
+                <Lock className="h-3.5 w-3.5 text-brand-400" />
+                <span>Active Settlement Safeguards</span>
+              </div>
+              <div className="space-y-2 font-mono text-[11px]">
+                <div className="flex justify-between py-1.5 border-b border-white/[0.05] text-slate-400">
+                  <span>Single-Tx Policy Limit</span>
+                  <span className="text-white">200.00 NEAR ($500)</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-white/[0.05] text-slate-400">
+                  <span>Consensus Finality</span>
+                  <span className="text-emerald-400">~1.1s (Nightshade 2.0)</span>
+                </div>
+                <div className="flex justify-between py-1.5 text-slate-400">
+                  <span>Custody Model</span>
+                  <span className="text-slate-200">Non-Custodial Wallet Sign</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Payee Verification Panel (Confirmation of Payee) */}
             <div className="rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 sm:p-7 space-y-5 shadow-xl">
               <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
                 <div className="flex items-center gap-2.5">
@@ -898,7 +957,7 @@ export default function PayPage() {
               ) : (
                 <div className="space-y-4">
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Enter a recipient NEAR account on the left to automatically query the on-chain registry and screen for lookalike homoglyphs.
+                    Enter a recipient account or cross-chain address on the left to automatically query the on-chain registry and screen for lookalike homoglyphs.
                   </p>
                   <div className="space-y-2.5 text-xs">
                     {[
@@ -915,28 +974,6 @@ export default function PayPage() {
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Active Treasury Guardrails Summary */}
-            <div className="rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 space-y-3.5 text-xs">
-              <div className="flex items-center gap-2 text-slate-300 font-semibold">
-                <Lock className="h-3.5 w-3.5 text-brand-400" />
-                <span>Active Settlement Safeguards</span>
-              </div>
-              <div className="space-y-2 font-mono text-[11px]">
-                <div className="flex justify-between py-1.5 border-b border-white/[0.05] text-slate-400">
-                  <span>Single-Tx Policy Limit</span>
-                  <span className="text-white">200.00 NEAR ($500)</span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-white/[0.05] text-slate-400">
-                  <span>Consensus Finality</span>
-                  <span className="text-emerald-400">~1.1s (Nightshade 2.0)</span>
-                </div>
-                <div className="flex justify-between py-1.5 text-slate-400">
-                  <span>Custody Model</span>
-                  <span className="text-slate-200">Non-Custodial Wallet Sign</span>
-                </div>
-              </div>
             </div>
 
           </div>

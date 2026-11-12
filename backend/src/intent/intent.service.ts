@@ -64,6 +64,11 @@ export interface ResolvedIntent {
   memo: string;
   resolvedPayee: ResolvedPayee;
   policyCheck: PolicyEvaluationResult;
+  velocity?: {
+    spentUSD: number;
+    paymentCount: number;
+    windowHours: number;
+  };
   settlementExecution: {
     sourceAccount: string;
     settlementRail: "NEAR Native" | "NEAR Chain Signatures (MPC)" | "NEAR Intent Solver";
@@ -200,15 +205,13 @@ export class IntentService {
       isOfficialPartner: directoryMatch?.isOfficialPartner ?? false,
     });
 
-    const policyCheck = this.treasury.evaluatePayment(
+    const { evaluation: policyCheck, velocity } = await this.treasury.evaluateForAccount(
+      senderAccount,
       amountUSD,
       "Operations & Freelance",
       reputationScore,
       verificationStatus,
-      this.treasury.defaultPolicy,
-      180,
-      targetChainAddress,
-      senderAccount
+      targetChainAddress
     );
 
     if (warning) {
@@ -248,6 +251,7 @@ export class IntentService {
         warning,
       },
       policyCheck,
+      velocity,
       settlementExecution: {
         sourceAccount: senderAccount,
         settlementRail,

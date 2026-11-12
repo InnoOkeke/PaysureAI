@@ -68,12 +68,23 @@ export class AssistantService {
           return this.invoiceStatusReply(command.status);
         }
         case "treasury_check": {
-          const evaluation = this.treasury.evaluatePayment(
-            command.amountUSD ?? 0,
-            command.category ?? "Operations & Freelance",
-            85,
-            "VERIFIED"
-          );
+          const policyResult = accountId
+            ? await this.treasury.evaluateForAccount(
+                accountId,
+                command.amountUSD ?? 0,
+                command.category ?? "Operations & Freelance",
+                85,
+                "VERIFIED"
+              )
+            : {
+                evaluation: this.treasury.evaluatePayment(
+                  command.amountUSD ?? 0,
+                  command.category ?? "Operations & Freelance",
+                  85,
+                  "VERIFIED"
+                ),
+              };
+          const evaluation = policyResult.evaluation;
           return {
             reply:
               `Treasury policy check for $${(command.amountUSD ?? 0).toFixed(2)}:\n` +

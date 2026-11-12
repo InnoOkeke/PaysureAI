@@ -1,6 +1,15 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma, TreasuryPolicy as TreasuryPolicyRow } from "@prisma/client";
+import { NearService } from "../near/near.service";
+import { PrismaService } from "../prisma/prisma.service";
 import { OutlayerAttestation, OutlayerService } from "./outlayer.service";
 import { SputnikDaoService } from "./sputnik-dao.service";
+
+export interface DepartmentBudget {
+  category: string;
+  monthlyBudgetUSD: number;
+  spentThisMonthUSD: number;
+}
 
 export interface TreasuryPolicy {
   maxSingleTxAmountUSD: number;
@@ -8,11 +17,7 @@ export interface TreasuryPolicy {
   autoApproveVerifiedUnderUSD: number;
   emergencyKillswitchActive: boolean;
   sputnikDaoContract: string;
-  departmentBudgets: {
-    category: string;
-    monthlyBudgetUSD: number;
-    spentThisMonthUSD: number;
-  }[];
+  departmentBudgets: DepartmentBudget[];
 }
 
 export interface PolicyEvaluationResult {
@@ -26,6 +31,21 @@ export interface PolicyEvaluationResult {
   riskTier: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   outlayerAttestation?: OutlayerAttestation;
   sputnikDaoProposal?: ReturnType<SputnikDaoService["buildTransferProposal"]>;
+}
+
+export interface VelocitySnapshot {
+  spentUSD: number;
+  paymentCount: number;
+  windowHours: number;
+}
+
+export interface PolicyUpdate {
+  maxSingleTxAmountUSD?: number;
+  dailyVelocityCapUSD?: number;
+  autoApproveVerifiedUnderUSD?: number;
+  emergencyKillswitchActive?: boolean;
+  sputnikDaoContract?: string;
+  departmentBudgets?: DepartmentBudget[];
 }
 
 export const DEFAULT_TREASURY_POLICY: TreasuryPolicy = {
@@ -46,11 +66,111 @@ export const DEFAULT_TREASURY_POLICY: TreasuryPolicy = {
 export class TreasuryService {
   constructor(
     private readonly outlayer: OutlayerService,
-    private readonly sputnikDao: SputnikDaoService
+    private readonly sputnikDao: SputnikDaoService,
+    private readonly prisma: PrismaService,
+    private readonly near: NearService
   ) {}
 
   get defaultPolicy(): TreasuryPolicy {
-    return { ...DEFAULT_TREASURY_POLICY, sputnikDaoContract: this.sputnikDao.defaultDaoContract };
+    return {
+      ...DEFAULT_TREASURY_POLICY,
+      sputnikDaoContract: this.sputnikDao.defaultDaoContract,
+      departmentBudgets: DEFAULT_TREASURY_POLICY.departmentBudgets.map((budget) => ({ ...budget })),
+    };
+  }
+
+  async getPolicyForAccount(accountId?: string): Promise<TreasuryPolicy> {
+    if (!accountId) return this.defaultPolicy;
+
+    const row = await this.prisma.treasuryPolicy.findUnique({
+      where: { accountId: accountId.toLowerCase() },
+    });
+
+    return row ? this.mapPolicy(row) : this.defaultPolicy;
+  }
+
+  async upsertPolicy(accountId: string, update: PolicyUpdate): Promise<TreasuryPolicy> {
+    const cleanAccountId = accountId.toLowerCase();
+    const existing = await this.prisma.treasuryPolicy.findUnique({
+      where: { accountId: cleanAccountId },
+    });
+    const base = existing ? this.mapPolicy(existing) : this.defaultPolicy;
+    const merged: TreasuryPolicy = {
+      ...base,
+      ...update,
+      departmentBudgets: update.departmentBudgets ?? base.departmentBudgets,
+      sputnikDaoContract: update.sputnikDaoContract ?? base.sputnikDaoContract,
+    };
+
+    const data = {
+      maxSingleTxAmountUSD: merged.maxSingleTxAmountUSD,
+      dailyVelocityCapUSD: merged.dailyVelocityCapUSD,
+      autoApproveVerifiedUnderUSD: merged.autoApproveVerifiedUnderUSD,
+      emergencyKillswitchActive: merged.emergencyKillswitchActive,
+      sputnikDaoContract: merged.sputnikDaoContract,
+      departmentBudgets: merged.departmentBudgets as unknown as Prisma.InputJsonValue,
+    };
+
+    const saved = await this.prisma.treasuryPolicy.upsert({
+      where: { accountId: cleanAccountId },
+      create: { accountId: cleanAccountId, ...data },
+      update: data,
+    });
+
+    return this.mapPolicy(saved);
+  }
+
+  async setKillswitch(accountId: string, active: boolean): Promise<TreasuryPolicy> {
+    return this.upsertPolicy(accountId, { emergencyKillswitchActive: active });
+  }
+
+  async getVelocity(accountId: string, windowHours = 24): Promise<VelocitySnapshot> {
+    const since = new Date(Date.now() - windowHours * 60 * 60 * 1000);
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        senderAddress: accountId.toLowerCase(),
+        status: "SUCCESS",
+        createdAt: { gte: since },
+      },
+    });
+
+    const spentUSD = payments.reduce((total, payment) => {
+      const isStable = /usd/i.test(payment.tokenAddress);
+      return total + (isStable ? payment.amount : payment.amount * this.near.nearUsdRate);
+    }, 0);
+
+    return {
+      spentUSD: Number(spentUSD.toFixed(2)),
+      paymentCount: payments.length,
+      windowHours,
+    };
+  }
+
+  async evaluateForAccount(
+    accountId: string,
+    amountUSD: number,
+    category: string,
+    reputationScore: number,
+    verificationStatus: string,
+    recipientAddress = "recipient.testnet"
+  ) {
+    const [policy, velocity] = await Promise.all([
+      this.getPolicyForAccount(accountId),
+      this.getVelocity(accountId),
+    ]);
+
+    const evaluation = this.evaluatePayment(
+      amountUSD,
+      category,
+      reputationScore,
+      verificationStatus,
+      policy,
+      velocity.spentUSD,
+      recipientAddress,
+      accountId
+    );
+
+    return { evaluation, policy, velocity };
   }
 
   calculateReputationScore(recipient: {
@@ -77,7 +197,7 @@ export class TreasuryService {
     reputationScore: number,
     verificationStatus: string,
     policy: TreasuryPolicy = this.defaultPolicy,
-    spentInLast24hUSD = 340,
+    spentInLast24hUSD = 0,
     recipientAddress = "recipient.testnet",
     senderAddress = "user.testnet"
   ): PolicyEvaluationResult {
@@ -168,6 +288,21 @@ export class TreasuryService {
       riskTier,
       outlayerAttestation,
       sputnikDaoProposal,
+    };
+  }
+
+  private mapPolicy(row: TreasuryPolicyRow): TreasuryPolicy {
+    const budgets = Array.isArray(row.departmentBudgets)
+      ? (row.departmentBudgets as unknown as DepartmentBudget[])
+      : this.defaultPolicy.departmentBudgets;
+
+    return {
+      maxSingleTxAmountUSD: row.maxSingleTxAmountUSD,
+      dailyVelocityCapUSD: row.dailyVelocityCapUSD,
+      autoApproveVerifiedUnderUSD: row.autoApproveVerifiedUnderUSD,
+      emergencyKillswitchActive: row.emergencyKillswitchActive,
+      sputnikDaoContract: row.sputnikDaoContract,
+      departmentBudgets: budgets,
     };
   }
 }

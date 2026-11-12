@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { findCounterparty } from "@/lib/recipients";
 import { isValidNearAccountId } from "@/lib/near/config";
 
 export const dynamic = "force-dynamic";
@@ -8,18 +8,22 @@ export async function POST(req: NextRequest) {
   try {
     const { address, name, paymentId } = await req.json();
 
-    if (!address || (!isValidNearAccountId(address) && address.length < 3)) {
+    if (!address) {
       return NextResponse.json(
         {
           status: "UNVERIFIED",
           isVerified: false,
-          reason: "Invalid NEAR Account ID format.",
+          reason: "Missing recipient address.",
         },
         { status: 400 }
       );
     }
 
-    const cleanAddress = address.trim().toLowerCase();
+    let cleanAddress = address.trim().toLowerCase();
+    // Gracefully handle common typos like .tesnet -> .testnet
+    if (cleanAddress.endsWith(".tesnet")) {
+      cleanAddress = cleanAddress.replace(/\.tesnet$/, ".testnet");
+    }
 
     // Query live NEAR blockchain RPC to verify if account actually exists on NEAR Testnet
     let liveOnChain = false;
@@ -59,17 +63,28 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Query database for registered counterparty KYC record
-    const recipient = await prisma.recipient.findFirst({
-      where: {
-        OR: [
-          { walletAddress: cleanAddress },
-          paymentId ? { paymentId: paymentId.toLowerCase() } : undefined,
-        ].filter(Boolean) as any,
-      },
-    });
+    // Look up counterparty in verified registry
+    const recipient = await findCounterparty(cleanAddress, paymentId);
 
     if (recipient && recipient.verificationStatus === "VERIFIED") {
+      // Check for name mismatch if an invoice name was provided
+      if (name && name.trim().length > 0) {
+        const cleanReqName = name.trim().toLowerCase();
+        const cleanRegName = recipient.displayName.toLowerCase();
+        if (
+          !cleanRegName.includes(cleanReqName) &&
+          !cleanReqName.includes(cleanRegName)
+        ) {
+          return NextResponse.json({
+            status: "MISMATCH",
+            isVerified: false,
+            displayName: recipient.displayName,
+            walletAddress: cleanAddress,
+            reason: `CRITICAL MISMATCH: Invoice names payee as '${name}', but account ID is registered to '${recipient.displayName}'. Fraud risk alert!`,
+          });
+        }
+      }
+
       return NextResponse.json({
         status: "VERIFIED",
         isVerified: true,
@@ -81,22 +96,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (recipient) {
-      if (name && recipient.displayName.toLowerCase() !== name.toLowerCase()) {
-        return NextResponse.json({
-          status: "MISMATCH",
-          isVerified: false,
-          displayName: recipient.displayName,
-          walletAddress: cleanAddress,
-          reason: `CRITICAL MISMATCH: Invoice names payee as '${name}', but account ID is registered to '${recipient.displayName}'. Fraud risk alert!`,
-        });
-      }
-
       return NextResponse.json({
         status: recipient.verificationStatus || "WARNING",
         isVerified: recipient.verificationStatus === "VERIFIED",
         displayName: recipient.displayName,
         walletAddress: cleanAddress,
-        reason: `Account is active on NEAR Testnet (balance: ~${onChainBalance} NEAR). Organization attestation is pending.`,
+        reason: `Account is active on NEAR Testnet (balance: ~${onChainBalance} NEAR). Organization attestation status: ${recipient.verificationStatus}.`,
       });
     }
 

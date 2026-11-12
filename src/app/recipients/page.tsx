@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Users, 
   Search, 
@@ -30,32 +30,23 @@ export default function RecipientsPage() {
   const [regWallet, setRegWallet] = useState(accountId || "");
   const [registering, setRegistering] = useState(false);
 
-  const [recipientsList, setRecipientsList] = useState<any[]>([
-    {
-      id: "1",
-      displayName: "Acme Web3 Design Studio",
-      paymentId: "acme-design",
-      walletAddress: "acme-design.testnet",
-      verificationStatus: "VERIFIED",
-      notes: "Official NEAR Ecosystem Design Partner.",
-    },
-    {
-      id: "2",
-      displayName: "Satoshi Freelance Engineering",
-      paymentId: "satoshi-dev",
-      walletAddress: "satoshi-dev.testnet",
-      verificationStatus: "VERIFIED",
-      notes: "Smart Contract auditor & Rust / NEAR systems specialist.",
-    },
-    {
-      id: "3",
-      displayName: "Apex Media Agency",
-      paymentId: "apex-media",
-      walletAddress: "apex-media.testnet",
-      verificationStatus: "WARNING",
-      notes: "Recent key rotation reported by payee. Exercise caution.",
-    },
-  ]);
+  const [recipientsList, setRecipientsList] = useState<any[]>([]);
+
+  const fetchRecipients = async () => {
+    try {
+      const res = await fetch("/api/recipients");
+      const data = await res.json();
+      if (data.recipients) {
+        setRecipientsList(data.recipients);
+      }
+    } catch (e) {
+      console.error("Failed to load recipients:", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchRecipients();
+  }, []);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,24 +75,33 @@ export default function RecipientsPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regPaymentId || !regDisplayName || !regWallet) return;
+    if (!regDisplayName || !regWallet) return;
 
     setRegistering(true);
     try {
-      const newRecipient = {
-        id: Date.now().toString(),
-        displayName: regDisplayName,
-        paymentId: regPaymentId,
-        walletAddress: regWallet,
-        verificationStatus: "VERIFIED",
-        notes: "Registered on NEAR Confirmation of Payee Directory.",
-      };
-      setRecipientsList([newRecipient, ...recipientsList]);
-      setShowRegisterModal(false);
-      setRegPaymentId("");
-      setRegDisplayName("");
+      const res = await fetch("/api/recipients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName: regDisplayName.trim(),
+          paymentId: regPaymentId.trim() || undefined,
+          walletAddress: regWallet.trim(),
+          notes: "Registered on NEAR Confirmation of Payee Directory.",
+          verificationStatus: "VERIFIED",
+        }),
+      });
+
+      if (res.ok) {
+        await fetchRecipients();
+        setShowRegisterModal(false);
+        setRegPaymentId("");
+        setRegDisplayName("");
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to register recipient");
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Register recipient error:", err);
     } finally {
       setRegistering(false);
     }

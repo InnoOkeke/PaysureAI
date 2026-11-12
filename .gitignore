@@ -20,4 +20,5 @@ typechain
 typechain-types
 .DS_Store
 *.pem
+*.tsbuildinfo
 

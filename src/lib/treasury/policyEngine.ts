@@ -2,18 +2,24 @@
  * PaySure AI Treasury & Security Guardrails Policy Engine
  * 
  * Enforces human-defined constraints on autonomous AI spending:
- * - Single transaction limits
- * - 24-hour spending velocity caps
+ * - Single transaction limits ($500.00 USD)
+ * - 24-hour spending velocity caps ($2,500.00 USD)
  * - Department budget allocations
- * - Autonomous auto-approval thresholds for verified counterparties
+ * - Autonomous auto-approval thresholds for verified counterparties (<= $100.00 USD)
  * - Counterparty trust & reputation scoring (0-100)
+ * - SputnikDAO / Trezu Multi-Sig Escalation for high-value transfers
+ * - OutLayer Agent Security attestation
  */
 
+import { evaluateOutlayerPolicy, OutlayerAttestation } from "@/lib/security/outlayer";
+import { buildSputnikTransferProposal, DEFAULT_SPUTNIK_DAO } from "./sputnikDao";
+
 export interface TreasuryPolicy {
-  maxSingleTxAmountUSD: number; // e.g. $250.00
-  dailyVelocityCapUSD: number; // e.g. $1,000.00
-  autoApproveVerifiedUnderUSD: number; // e.g. $50.00
+  maxSingleTxAmountUSD: number; // e.g. $500.00
+  dailyVelocityCapUSD: number; // e.g. $2,500.00
+  autoApproveVerifiedUnderUSD: number; // e.g. $100.00
   emergencyKillswitchActive: boolean;
+  sputnikDaoContract: string;
   departmentBudgets: {
     category: string;
     monthlyBudgetUSD: number;
@@ -24,24 +30,28 @@ export interface TreasuryPolicy {
 export interface PolicyEvaluationResult {
   isAllowed: boolean;
   requiresHumanSignoff: boolean;
+  requiresSputnikDaoEscalation: boolean;
   autoExecutable: boolean;
   violations: string[];
   warnings: string[];
   reputationScore: number;
   riskTier: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  outlayerAttestation?: OutlayerAttestation;
+  sputnikDaoProposal?: ReturnType<typeof buildSputnikTransferProposal>;
 }
 
 // Default human-defined business constraints
 export const DEFAULT_TREASURY_POLICY: TreasuryPolicy = {
-  maxSingleTxAmountUSD: 250,
-  dailyVelocityCapUSD: 1000,
-  autoApproveVerifiedUnderUSD: 50,
+  maxSingleTxAmountUSD: 500,
+  dailyVelocityCapUSD: 2500,
+  autoApproveVerifiedUnderUSD: 100,
   emergencyKillswitchActive: false,
+  sputnikDaoContract: DEFAULT_SPUTNIK_DAO,
   departmentBudgets: [
-    { category: "Engineering & Audits", monthlyBudgetUSD: 3000, spentThisMonthUSD: 1250 },
-    { category: "Design & UX", monthlyBudgetUSD: 1500, spentThisMonthUSD: 750 },
-    { category: "Operations & Freelance", monthlyBudgetUSD: 1000, spentThisMonthUSD: 320 },
-    { category: "Marketing & Growth", monthlyBudgetUSD: 800, spentThisMonthUSD: 200 },
+    { category: "Engineering & Audits", monthlyBudgetUSD: 5000, spentThisMonthUSD: 1450 },
+    { category: "Design & UX", monthlyBudgetUSD: 2500, spentThisMonthUSD: 850 },
+    { category: "Operations & Freelance", monthlyBudgetUSD: 2000, spentThisMonthUSD: 420 },
+    { category: "Marketing & Growth", monthlyBudgetUSD: 1500, spentThisMonthUSD: 300 },
   ],
 };
 
@@ -75,7 +85,9 @@ export function evaluatePaymentAgainstPolicy(
   reputationScore: number,
   verificationStatus: string,
   policy: TreasuryPolicy = DEFAULT_TREASURY_POLICY,
-  spentInLast24hUSD: number = 180
+  spentInLast24hUSD: number = 340,
+  recipientAddress: string = "recipient.testnet",
+  senderAddress: string = "user.testnet"
 ): PolicyEvaluationResult {
   const violations: string[] = [];
   const warnings: string[] = [];
@@ -86,9 +98,10 @@ export function evaluatePaymentAgainstPolicy(
   }
 
   // 2. Single Transaction Limit
-  if (amountUSD > policy.maxSingleTxAmountUSD) {
+  const exceedsSingleTx = amountUSD > policy.maxSingleTxAmountUSD;
+  if (exceedsSingleTx) {
     violations.push(
-      `Amount ($${amountUSD.toFixed(2)}) exceeds maximum single transaction limit of $${policy.maxSingleTxAmountUSD.toFixed(2)}.`
+      `Amount ($${amountUSD.toFixed(2)}) exceeds maximum single transaction limit of $${policy.maxSingleTxAmountUSD.toFixed(2)}. Escalating to SputnikDAO council multi-sig.`
     );
   }
 
@@ -114,16 +127,39 @@ export function evaluatePaymentAgainstPolicy(
     warnings.push("Unregistered or low-reputation counterparty. Extra verification required.");
   }
 
+  // OutLayer Agent Security evaluation
+  const outlayerAttestation = evaluateOutlayerPolicy({
+    senderAddress,
+    recipientAddress,
+    amountUSD,
+    token: "NEAR",
+    intent: `Transfer ${amountUSD} USD to ${recipientAddress} for ${category}`,
+  });
+
+  const requiresSputnikDaoEscalation = exceedsSingleTx || outlayerAttestation.recommendation === "REQUIRE_MULTISIG";
+
+  // Build SputnikDAO proposal payload if escalated
+  let sputnikDaoProposal: ReturnType<typeof buildSputnikTransferProposal> | undefined;
+  if (requiresSputnikDaoEscalation) {
+    sputnikDaoProposal = buildSputnikTransferProposal({
+      daoContract: policy.sputnikDaoContract,
+      description: `Payment of $${amountUSD.toFixed(2)} to ${recipientAddress} for ${category}`,
+      receiverId: recipientAddress,
+      amountNear: (amountUSD / 5).toFixed(2), // Approximate NEAR value based on ~$5/NEAR
+    });
+  }
+
   const isAllowed = violations.length === 0;
 
   // Auto-Executable criteria:
-  // Must be verified, score >= 80, amount <= autoApproveVerifiedUnderUSD, and zero violations
+  // Must be verified, score >= 80, amount <= autoApproveVerifiedUnderUSD, zero violations, and OutLayer approved
   const autoExecutable =
     isAllowed &&
     verificationStatus === "VERIFIED" &&
     reputationScore >= 80 &&
     amountUSD <= policy.autoApproveVerifiedUnderUSD &&
-    warnings.length === 0;
+    warnings.length === 0 &&
+    outlayerAttestation.compliant;
 
   const requiresHumanSignoff = !autoExecutable;
 
@@ -135,11 +171,13 @@ export function evaluatePaymentAgainstPolicy(
   return {
     isAllowed,
     requiresHumanSignoff,
+    requiresSputnikDaoEscalation,
     autoExecutable,
     violations,
     warnings,
     reputationScore,
     riskTier,
+    outlayerAttestation,
+    sputnikDaoProposal,
   };
 }
-

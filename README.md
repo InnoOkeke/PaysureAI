@@ -19,11 +19,26 @@ Built for the **NEAR Protocol "Build Beyond Boundaries" Hackathon ($250,000 Priz
 
 ## 🏆 Hackathon Track Alignment
 
-| Track | Hackathon Requirement | PaySure AI Implementation |
-| :--- | :--- | :--- |
-| **Real-World Money** | Bring everyday business payments onchain, from payroll and invoices to remittances and stablecoin payments. | • **Multimodal AI OCR Ingestion**: Drag-and-drop PDF/image invoices with automatic line item, payee, and due date parsing.<br>• **NEP-141 USDC & NEAR**: Everyday stablecoin settlement with sub-second finality.<br>• **Audit-Ready PDF Receipts**: Downloadable compliance receipts stamped with Confirmation of Payee verification. |
-| **AI Security & Defense** | Make AI-controlled money safer with spending limits, wallet safeguards, reputation systems and scam detection. | • **Autonomous Treasury Policy Engine** (`/treasury`): Human-defined spend limits and 24-hr daily velocity caps.<br>• **Confirmation of Payee**: Eliminates typosquatting and lookalike spoofing (`satosh1.near` vs `satoshi.near`).<br>• **Counterparty Reputation Scoring**: Live 0–100 trust scoring algorithm.<br>• **Emergency Killswitch**: 1-click administrative freeze. |
-| **Autonomous Business & NEAR Intents** | Create AI-run businesses that manage payments, sales, procurement and treasuries within human-defined constraints. | • **Conversational Intent Resolver** (`/pay` & Floating Copilot): Natural language parser (*"Send $50 to John Kennedy on Base"*).<br>• **NEAR Chain Signatures (MPC)**: Deterministic multi-chain address derivation (`v1.signer-prod.testnet`) routing settlements to **Base**, **Ethereum**, **Arbitrum**, and **Solana**.<br>• **Autonomous Decision Matrix**: Auto-executes payments under human-configured thresholds (e.g. `< $250 USD`). |
+| Track ID | Track Name | Hackathon Focus | PaySure AI Implementation |
+| :--- | :--- | :--- | :--- |
+| `realworld` | **Real-World Money** | Invoicing, payroll, remittances, and stablecoins. | • **Multimodal AI OCR**: Drag-and-drop PDF/image parsing.<br>• **NEP-141 USDC & NEAR**: Sub-second settlement.<br>• **Audit-Ready PDF Receipts**: Downloadable compliance receipts stamped with on-chain verification. |
+| `security` | **AI Security & Defense** | Spending limits, wallet safeguards, scam detection. | • **OutLayer Integration**: Transaction security attestation.<br>• **Confirmation of Payee**: Eliminates typosquatting (`satosh1.near` vs `satoshi.near`).<br>• **Treasury Guardrails** (`/treasury`): Single-tx limits, 24h velocity meter, and 1-click killswitch. |
+| `business` | **Autonomous Business** | AI businesses managing procurement and treasuries. | • **Conversational Intent Resolver**: Natural language prompts.<br>• **Auto-Approval Threshold**: Instant settlement under $\le \$100$.<br>• **SputnikDAO Escalation**: High-value payments route to council multi-sig. |
+| `agents` | **Agent Economy** | Agents that earn, spend, and get hired. | • **NEAR Agent Market** (`market.near.ai`): Registered agent manifest at `/api/agent`.<br>• **MCP Server**: Model Context Protocol endpoint at `/api/agent/mcp` for Claude Desktop & swarms. |
+| `social` | **Social Money** | Shared budgets and DAO governance. | • **SputnikDAO & Trezu Multi-Sig**: Direct on-chain `add_proposal` crafting to `paysure-council.sputnik-dao.testnet`. |
+
+---
+
+## 🌐 Ecosystem & Partner Integrations
+
+| Partner | Category | Role in PaySure AI | Documentation & Links |
+| :--- | :--- | :--- | :--- |
+| **NEAR Intents** | Cross-Chain Execution | Natural language multi-chain intent resolution via Chain Signatures MPC (`v1.signer-prod.testnet`). | [Docs](https://docs.near-intents.org/) • [Website](https://intents.near.org/) |
+| **HOT** | Chain Abstraction | Official NEAR Wallet Selector integration (`@near-wallet-selector/here-wallet`) for Telegram/web signing. | [Docs](https://docs.hotdao.ai/) • [Website](https://hot-labs.org/) |
+| **NEAR.AI** | Private AI Inference | Decentralized AI inference cloud (`api.near.ai`) powering invoice extraction and assistant copilot. | [Docs](https://docs.near.ai/) • [Cloud](https://cloud.near.ai) |
+| **SputnikDAO / Trezu** | Multisig Treasury | Autonomous escalation of high-value disbursements to DAO council multi-sig proposals. | [Docs](https://github.com/near-daos/sputnik-dao-contract) • [Trezu](https://trezu.org/) |
+| **OutLayer** | Agent Security | Agent policy checks, prompt-injection defense, and cryptographic compliance attestation. | [Docs](https://app.outlayer.ai/docs/getting-started) • [Website](https://outlayer.ai/) |
+| **Agent Market** | Agent Marketplace | Exposes agent tools and Model Context Protocol (`/api/agent/mcp`) to let other agents hire PaySure AI. | [Docs](https://docs.market.near.ai/) • [Market](https://market.near.ai/) |
 
 ---
 

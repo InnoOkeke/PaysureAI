@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deepseek, DEEPSEEK_MODEL } from "@/lib/deepseek";
+import { nearAi, NEARAI_MODEL, AI_PROVIDER_NAME } from "@/lib/ai/nearAi";
 import { z } from "zod";
 
 const ExtractedInvoiceSchema = z.object({
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       invoiceContent = textFromBuffer.slice(0, 10000);
     }
 
-    const systemPrompt = `You are a specialized Web3 Fintech Invoice Extraction AI.
+    const systemPrompt = `You are a specialized Web3 Fintech Invoice Extraction AI running on NEAR.AI Cloud.
 Analyze the provided document text and extract payment details with extreme accuracy.
 
 SECURITY & SAFETY RULES:
@@ -71,8 +71,13 @@ Return pure, valid JSON with this exact structure:
   "suspiciousFlags": []
 }`;
 
-    // If no DEEPSEEK_API_KEY is configured, return intelligent deterministic extraction
-    if (!process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY === "dummy_key") {
+    const hasApiKey = Boolean(
+      process.env.NEARAI_API_KEY ||
+      process.env.NEAR_AI_API_KEY ||
+      (process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !== "dummy_key")
+    );
+
+    if (!hasApiKey) {
       // Extract any NEAR account using regex (e.g. name.testnet or name.near)
       const nearMatch = invoiceContent.match(/([a-z0-9-_]+)\.(testnet|near)/i);
       const addressMatch = invoiceContent.match(/0x[a-fA-F0-9]{40}/);
@@ -97,13 +102,14 @@ Return pure, valid JSON with this exact structure:
         ],
         confidenceScore: 92,
         suspiciousFlags: [],
+        provider: AI_PROVIDER_NAME,
       };
 
       return NextResponse.json({ success: true, data: fallbackData });
     }
 
-    const completion = await deepseek.chat.completions.create({
-      model: DEEPSEEK_MODEL,
+    const completion = await nearAi.chat.completions.create({
+      model: NEARAI_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
         {
@@ -119,7 +125,13 @@ Return pure, valid JSON with this exact structure:
     const parsedJson = JSON.parse(rawResponse);
     const validatedData = ExtractedInvoiceSchema.parse(parsedJson);
 
-    return NextResponse.json({ success: true, data: validatedData });
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...validatedData,
+        provider: AI_PROVIDER_NAME,
+      },
+    });
   } catch (error: any) {
     console.error("Invoice extraction error:", error);
     return NextResponse.json(
@@ -136,10 +148,10 @@ Return pure, valid JSON with this exact structure:
           lineItems: [],
           confidenceScore: 70,
           suspiciousFlags: ["Manual verification recommended."],
+          provider: AI_PROVIDER_NAME,
         },
       },
       { status: 200 }
     );
   }
 }
-

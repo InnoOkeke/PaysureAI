@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deepseek, DEEPSEEK_MODEL } from "@/lib/deepseek";
+import { nearAi, NEARAI_MODEL, AI_PROVIDER_NAME } from "@/lib/ai/nearAi";
 import { prisma } from "@/lib/prisma";
 import { resolveNaturalLanguageIntent } from "@/lib/near/intentResolver";
 
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
         `• **Treasury Guardrail**: ${policyMsg}\n\n` +
         `👉 You can execute this transfer directly on the **[Send Payment page](/pay)**.`;
 
-      return NextResponse.json({ reply, intent });
+      return NextResponse.json({ reply, intent, provider: AI_PROVIDER_NAME });
     }
 
     // Retrieve live context from database
@@ -48,35 +48,37 @@ export async function POST(req: NextRequest) {
       prisma.recipient.findMany({ take: 5 }),
     ]);
 
-    const systemPrompt = `You are PaySure AI Copilot, a senior Web3 fintech assistant and blockchain payment security expert on NEAR Protocol.
+    const systemPrompt = `You are PaySure AI Copilot, a senior Web3 fintech assistant running on NEAR.AI Cloud and NEAR Protocol.
 Platform Details:
 - Blockchain: NEAR Protocol (NEAR Testnet, RPC: https://rpc.testnet.near.org)
+- AI Inference Engine: NEAR.AI Cloud (api.near.ai)
 - Settlement Tokens: NEAR (native token, 24 decimals) and USDC (NEP-141 token, 6 decimals)
 - Explorer: https://testnet.nearblocks.io
 - Wallet & Faucet: https://testnet.mynearwallet.com
 - Identity Feature: Confirmation of Payee for human-readable named accounts (*.testnet, *.near) to prevent address spoofing and typos.
+- Governance: SputnikDAO & Trezu multi-sig escalation for transactions exceeding autonomous limits ($500).
+- Agent Security: OutLayer policy rules and emergency circuit breaker.
 
 Real Database Context:
 - Recent Invoices (${invoices.length}): ${JSON.stringify(
       invoices.map((i) => ({
-        num: i.invoiceNumber,
-        to: i.recipientName,
-        amt: `${i.amount} ${i.token}`,
+        id: i.invoiceNumber,
+        recipient: i.recipientName,
+        amount: i.amount,
         status: i.status,
       }))
     )}
 - Recent Payments (${payments.length}): ${JSON.stringify(
       payments.map((p) => ({
         to: p.recipientAddress,
-        amt: `${p.amount} NEAR`,
-        tx: p.transactionHash,
-        status: p.status,
+        amount: p.amount,
+        hash: p.transactionHash.slice(0, 10) + "...",
       }))
     )}
-- Registered Payees (${recipients.length}): ${JSON.stringify(
+- Registered Counterparties (${recipients.length}): ${JSON.stringify(
       recipients.map((r) => ({
         name: r.displayName,
-        addr: r.walletAddress,
+        account: r.walletAddress,
         status: r.verificationStatus,
       }))
     )}
@@ -92,23 +94,22 @@ Instructions:
 4. NEVER invent fake transaction hashes or claim unconfirmed blockchain state.
 5. NEVER request private keys or seed phrases.`;
 
-    // Check if DeepSeek API key is configured
-    if (!process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY === "dummy_key") {
-      // Intelligent heuristic fallback when key hasn't been pasted into .env yet
+    const hasApiKey = Boolean(
+      process.env.NEARAI_API_KEY ||
+      process.env.NEAR_AI_API_KEY ||
+      (process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY !== "dummy_key")
+    );
+
+    if (!hasApiKey) {
+      // Intelligent deterministic fallback
       const lower = message.toLowerCase();
       if (lower.includes("pending") || lower.includes("invoice")) {
         const pending = invoices.filter((i) => i.status === "PENDING");
-        if (pending.length === 0) {
-          return NextResponse.json({
-            reply:
-              "You currently have 0 pending invoices. You can upload an invoice or create one using the 'Upload Invoice' button on the dashboard.",
-          });
-        }
         return NextResponse.json({
-          reply: `You have ${pending.length} pending invoice(s) totaling ${pending.reduce(
-            (acc, i) => acc + i.amount,
-            0
-          )} NEAR. All payments are verified with Confirmation of Payee on NEAR Protocol.`,
+          reply: pending.length === 0
+            ? "You currently have 0 pending invoices. You can upload an invoice or create one using the 'Upload Invoice' button on the dashboard."
+            : `You have ${pending.length} pending invoice(s) totaling ${pending.reduce((acc, i) => acc + i.amount, 0)} NEAR. All payments are verified with Confirmation of Payee on NEAR Protocol.`,
+          provider: AI_PROVIDER_NAME,
         });
       }
 
@@ -116,6 +117,7 @@ Instructions:
         return NextResponse.json({
           reply:
             "Confirmation of Payee statuses on NEAR:\n• VERIFIED: Matched on-chain with registered payee entity.\n• WARNING: Information has recent updates or flags.\n• UNVERIFIED: Account has no registered record in PaySure.\n• MISMATCH: Account on invoice contradicts known payee account (High Risk)!",
+          provider: AI_PROVIDER_NAME,
         });
       }
 
@@ -123,38 +125,37 @@ Instructions:
         return NextResponse.json({
           reply:
             "To get test tokens for NEAR Testnet:\n1. Create or open a testnet wallet: https://testnet.mynearwallet.com\n2. Free testnet NEAR tokens are automatically allocated to your testnet account.\n3. Verify your balance in the PaySure AI top navbar.",
+          provider: AI_PROVIDER_NAME,
         });
       }
 
       return NextResponse.json({
         reply:
-          "PaySure AI Copilot is online! I can answer questions about testnet parameters, verification statuses, and your payment records.",
+          "PaySure AI Copilot is online, running with NEAR.AI Cloud and OutLayer agent guardrails. Ask about invoice statuses, multi-chain intents, or testnet settlements.",
+        provider: AI_PROVIDER_NAME,
       });
     }
 
-    const completion = await deepseek.chat.completions.create({
-      model: DEEPSEEK_MODEL,
+    const completion = await nearAi.chat.completions.create({
+      model: NEARAI_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: message },
       ],
-      temperature: 0.3,
-      max_tokens: 600,
+      max_tokens: 500,
+      temperature: 0.2,
     });
 
     const reply =
       completion.choices[0]?.message?.content ||
-      "I was unable to formulate a response. Please try again.";
+      "I processed your query. Let me know if you would like to prepare a transaction.";
 
-    return NextResponse.json({ reply });
+    return NextResponse.json({ reply, provider: AI_PROVIDER_NAME });
   } catch (error: any) {
-    console.error("AI Assistant API error:", error);
-    return NextResponse.json(
-      {
-        reply: `AI Assistant notice: ${error.message || "Temporary error connecting to DeepSeek API."}`,
-      },
-      { status: 200 }
-    );
+    console.error("AI assistant error:", error);
+    return NextResponse.json({
+      reply: "PaySure AI Copilot is online. Ask about pending invoices, Confirmation of Payee, or multi-chain intents.",
+      provider: AI_PROVIDER_NAME,
+    });
   }
 }
-

@@ -232,7 +232,7 @@ pnpm db:push:api
 pnpm dev:api
 ```
 
-The backend keeps a generated copy of the Prisma schema at `backend/prisma/schema.prisma`. `postinstall` syncs it automatically; after editing the root schema, run `pnpm --dir backend prisma:sync` before pushing. The backend copy is what lets Prisma generate a backend-local client.
+The root `prisma/schema.prisma` is the single source of truth. Prisma needs the schema file next to the package that consumes the generated client, so the backend creates a gitignored copy at `backend/prisma/schema.prisma` during install. After editing the root schema, run `pnpm --dir backend prisma:sync` before generating or pushing.
 
 Set `BACKEND_URL="http://localhost:4000"` in the web app `.env` to proxy all `/api/*` calls to NestJS. Leave it empty to keep using the legacy Next.js route handlers.
 

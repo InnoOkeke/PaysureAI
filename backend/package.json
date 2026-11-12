@@ -10,10 +10,10 @@
     "dev": "nest start --watch",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "prisma:generate": "prisma generate --schema=prisma/schema.prisma",
-    "prisma:push": "prisma db push --schema=prisma/schema.prisma",
-    "postinstall": "cp ../prisma/schema.prisma prisma/schema.prisma && prisma generate --schema=prisma/schema.prisma",
-    "prisma:sync": "cp ../prisma/schema.prisma prisma/schema.prisma"
+    "prisma:generate": "mkdir -p prisma && cp ../prisma/schema.prisma prisma/schema.prisma && prisma generate --schema=prisma/schema.prisma",
+    "prisma:push": "mkdir -p prisma && cp ../prisma/schema.prisma prisma/schema.prisma && prisma db push --schema=prisma/schema.prisma",
+    "postinstall": "mkdir -p prisma && cp ../prisma/schema.prisma prisma/schema.prisma && prisma generate --schema=prisma/schema.prisma",
+    "prisma:sync": "mkdir -p prisma && cp ../prisma/schema.prisma prisma/schema.prisma"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",

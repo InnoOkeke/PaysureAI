@@ -2,6 +2,7 @@ import { Hero } from "@/components/landing/Hero";
 import { TrackShowcase } from "@/components/landing/TrackShowcase";
 import { Features } from "@/components/landing/Features";
 import { HowItWorks } from "@/components/landing/HowItWorks";
+import { KnowledgeBase } from "@/components/landing/KnowledgeBase";
 import { SecuritySection } from "@/components/landing/SecuritySection";
 import { BlockchainSection } from "@/components/landing/BlockchainSection";
 
@@ -12,6 +13,7 @@ export default function Home() {
       <TrackShowcase />
       <Features />
       <HowItWorks />
+      <KnowledgeBase />
       <SecuritySection />
       <BlockchainSection />
     </div>

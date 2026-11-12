@@ -62,6 +62,7 @@ export function Navbar() {
     { name: "Architecture", href: "/#architecture" },
     { name: "Features", href: "/#features" },
     { name: "How It Works", href: "/#how-it-works" },
+    { name: "Knowledge Base", href: "/#knowledge-base" },
     { name: "Security", href: "/#security" },
     { name: "Protocol", href: "/#protocol" },
   ];

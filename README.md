@@ -133,6 +133,14 @@ PaysureAI/
 │   └── near/
 │       ├── src/index.ts         # Native NEAR Confirmation of Payee Smart Contract
 │       └── package.json         # near-sdk-js build scripts
+├── backend/                     # NestJS API (intent engine, AI orchestrator, treasury)
+│   ├── src/
+│   │   ├── ai/                  # Provider failover, prompts, Zod schemas, cache, audit
+│   │   ├── intent/              # Deterministic parser, context builder, resolver
+│   │   ├── pending/             # Quote -> confirm -> execute lifecycle
+│   │   ├── treasury/            # Policy engine, OutLayer, SputnikDAO
+│   │   └── ...                  # invoices, payments, recipients, dashboard, agent/MCP
+│   └── package.json
 ├── src/
 │   ├── app/
 │   │   ├── page.tsx             # Fintech Landing Page
@@ -203,6 +211,61 @@ pnpm dev
 Open [http://localhost:3000](http://localhost:3000) to view PaySure AI.
 
 ---
+
+## 🧠 NestJS Backend
+
+The `backend/` app is the production API surface for PaySure AI. It reimplements every legacy Next.js route under `/api/*` and adds the AstroidBot-inspired intent engine.
+
+### Run locally
+
+```bash
+# 1. Install backend dependencies
+pnpm --dir backend install --ignore-workspace
+
+# 2. Configure environment (copy and fill in)
+cp backend/.env.example backend/.env
+
+# 3. Push the Prisma schema (shared with the web app)
+pnpm db:push:api
+
+# 4. Start the API on http://localhost:4000/api
+pnpm dev:api
+```
+
+The backend keeps a generated copy of the Prisma schema at `backend/prisma/schema.prisma`. `postinstall` syncs it automatically; after editing the root schema, run `pnpm --dir backend prisma:sync` before pushing. The backend copy is what lets Prisma generate a backend-local client.
+
+Set `BACKEND_URL="http://localhost:4000"` in the web app `.env` to proxy all `/api/*` calls to NestJS. Leave it empty to keep using the legacy Next.js route handlers.
+
+### What the intent engine does
+
+1. **Deterministic fast path** parses payments, payee checks, invoice questions, and navigation with zero AI latency.
+2. **Context classifier** skips database lookups for greetings and general chat.
+3. **AI orchestrator** calls NEAR.AI Cloud first, falls back to DeepSeek, validates JSON with Zod, caches responses, and writes an `AIRecommendation` audit row.
+4. **Resolver** matches payees against the Confirmation of Payee registry, applies treasury policy, and derives the settlement rail (NEAR native or Chain Signatures MPC).
+5. **Pending actions** require an explicit confirm step, enforce quote expiry, and use atomic claims to prevent double execution.
+
+### Backend endpoints
+
+| Method | Route | Purpose |
+| :--- | :--- | :--- |
+| `GET` | `/api/health` | Readiness probe |
+| `POST` | `/api/ai/assistant` | Grounded copilot + intent handling |
+| `POST` | `/api/ai/extract-invoice` | Multimodal invoice extraction |
+| `POST` | `/api/near/intents/resolve` | Natural language payment resolution |
+| `GET/POST` | `/api/near/intents` | Intent config and intent creation |
+| `POST` | `/api/intents/prepare` | Create an expiring pending action |
+| `POST` | `/api/intents/:id/confirm` | Atomically confirm a pending action |
+| `POST` | `/api/intents/:id/cancel` | Cancel a pending action |
+| `POST` | `/api/intents/:id/execute` | Record the signed transaction hash |
+| `GET/POST` | `/api/invoices` | Invoice list and creation |
+| `GET/POST` | `/api/payments` | Payment ledger and settlement recording |
+| `POST` | `/api/recipients/verify` | Live NEAR RPC + registry verification |
+| `GET` | `/api/dashboard` | Dashboard metrics |
+| `GET/POST` | `/api/agent` | Agent Market manifest and tool dispatch |
+| `GET/POST` | `/api/agent/mcp` | MCP manifest and JSON-RPC tools |
+| `GET/POST` | `/api/seed` | Seed demo counterparties and invoices |
+
+> The backend never holds wallet keys. It prepares and validates intents; the browser wallet still signs every settlement.
 
 ## 🧪 Demonstration Workflow
 

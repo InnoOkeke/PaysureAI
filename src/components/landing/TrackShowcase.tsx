@@ -24,14 +24,17 @@ export function TrackShowcase() {
   const [isSimulating, setIsSimulating] = useState(false);
 
   return (
-    <section id="architecture" className="py-20 sm:py-28 bg-navy-900/60 border-t border-navy-800 relative">
+    <section id="architecture" className="py-24 sm:py-32 bg-navy-900/60 border-t border-navy-800 relative">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-            3 Architectural Pillars. 1 Autonomous Financial Platform.
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 text-brand-400 text-xs font-mono font-semibold mb-3 border border-brand-500/20">
+            <span>Core Financial Architecture</span>
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-[-0.03em] text-white">
+            Three Foundational Pillars. One Unified Platform.
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-slate-300">
-            Explore how PaySure AI solves real-world corporate payments, safeguards autonomous agents, and routes conversational multi-chain intents.
+          <p className="mt-4 text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
+            Explore how PaySure AI solves real-world corporate payments, safeguards autonomous agent capital, and routes conversational multi-chain intents.
           </p>
         </div>
 

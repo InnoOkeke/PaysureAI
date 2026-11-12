@@ -94,11 +94,11 @@ export function Navbar() {
             </div>
           </Link>
 
-          {/* Subdomain pill when inside the application */}
+          {/* Live Network pill when inside the application */}
           {!isLandingPage && (
-            <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-navy-900 border border-navy-800 text-[11px] font-mono text-slate-300">
+            <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-navy-900/90 border border-navy-800 text-[11px] font-mono text-slate-300 shadow-inner">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>app.paysure.ai</span>
+              <span>NEAR Testnet</span>
             </div>
           )}
 
@@ -154,12 +154,9 @@ export function Navbar() {
 
               <Link
                 href="/dashboard"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-600/25 hover:shadow-brand-600/40 transition-all active:scale-[0.98]"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white shadow-lg shadow-brand-600/30 hover:shadow-brand-600/40 transition-all active:scale-[0.98] border border-brand-400/30"
               >
-                <span>Launch App</span>
-                <span className="hidden sm:inline-block text-[10px] font-mono text-brand-200 bg-brand-700/50 px-1.5 py-0.5 rounded">
-                  app.paysure.ai
-                </span>
+                <span>Launch Console</span>
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -317,7 +314,7 @@ export function Navbar() {
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-brand-600 text-white"
                 >
-                  <span>Launch App (app.paysure.ai)</span>
+                  <span>Launch Console</span>
                   <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
               </div>

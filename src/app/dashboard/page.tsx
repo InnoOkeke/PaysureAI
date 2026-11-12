@@ -4,11 +4,9 @@ import { useState, useEffect } from "react";
 import { 
   ShieldCheck, 
   Wallet, 
-  ExternalLink, 
   FileUp, 
   Send, 
   Plus, 
-  Sparkles, 
   ArrowRight, 
   TrendingUp 
 } from "lucide-react";
@@ -65,17 +63,10 @@ export default function DashboardPage() {
               Autonomous Invoicing &amp; Payments
             </span>
             <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
-            <a
-              href="https://app.paysure.ai"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-500/10 hover:bg-brand-500/20 text-brand-300 border border-brand-500/20 text-[11px] font-mono transition-colors"
-              title="Open Official Web3 Application URL: app.paysure.ai"
-            >
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>app.paysure.ai</span>
-              <ExternalLink className="h-2.5 w-2.5 opacity-70" />
-            </a>
+              <span>NEAR Testnet Active</span>
+            </div>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             Financial Dashboard

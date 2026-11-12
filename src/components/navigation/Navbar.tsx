@@ -2,26 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
-  ShieldCheck, 
   Wallet, 
   ExternalLink, 
-  CheckCircle2, 
   LogOut,
   ChevronDown,
-  Layers,
-  FileText,
-  Send,
-  Users,
-  History,
   RotateCw,
   Copy,
   Check,
   Menu,
   X,
-  ArrowUpRight,
-  Globe
+  ArrowUpRight
 } from "lucide-react";
 import { PaySureLogo } from "@/components/brand/Logos";
 import { useNearWallet } from "@/context/NearWalletContext";
@@ -34,29 +26,38 @@ export function Navbar() {
   const { 
     accountId, 
     isConnected, 
+    isConnecting, 
     balance, 
+    isFetchingBalance, 
     connect, 
     disconnect, 
-    refreshBalance, 
-    isConnecting, 
-    isFetchingBalance 
+    refreshBalance 
   } = useNearWallet();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // App-specific internal navigation links
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const appNavLinks = [
-    { name: "Dashboard", href: "/dashboard", icon: Layers },
-    { name: "Invoices", href: "/invoices", icon: FileText },
-    { name: "Send Payment", href: "/pay", icon: Send },
-    { name: "Treasury", href: "/treasury", icon: ShieldCheck },
-    { name: "Payees", href: "/recipients", icon: Users },
-    { name: "Ledger", href: "/history", icon: History },
+    { name: "Dashboard", href: "/dashboard" },
+    { name: "Invoices", href: "/invoices" },
+    { name: "Send Payment", href: "/pay" },
+    { name: "Treasury", href: "/treasury" },
+    { name: "Recipients", href: "/recipients" },
+    { name: "Ledger", href: "/history" },
   ];
 
-  // Landing page public marketing links
   const marketingLinks = [
     { name: "Architecture", href: "/#architecture" },
     { name: "Features", href: "/#features" },
@@ -73,145 +74,131 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-navy-800/60 bg-navy-950/85 backdrop-blur-xl shadow-lg shadow-black/30">
-      {/* Top subtle ambient glow line */}
-      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-brand-500/40 to-transparent pointer-events-none" />
+    <header className="sticky top-0 z-50 w-full bg-[#05070B]/80 backdrop-blur-2xl border-b border-white/[0.07] shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+      {/* Subtle top specular highlight */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent pointer-events-none" />
 
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Brand Logo & Context Badges */}
-        <div className="flex items-center gap-7">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex items-center justify-center group-hover:scale-105 transition-transform">
-              <PaySureLogo size={32} />
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 gap-4">
+        
+        {/* Left: Brand Identity */}
+        <div className="flex items-center shrink-0">
+          <Link href="/" className="flex items-center gap-3 whitespace-nowrap group">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-white/[0.1] flex items-center justify-center shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] group-hover:border-brand-400/40 transition-all">
+              <PaySureLogo size={22} />
             </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-extrabold tracking-tight text-white font-sans">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[16px] font-bold tracking-[-0.02em] text-white">
                 PaySure
               </span>
-              <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-brand-600/30 to-brand-400/20 text-brand-300 border border-brand-500/30">
+              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded-md bg-brand-500/15 text-brand-300 border border-brand-400/25 leading-none">
                 AI
               </span>
             </div>
           </Link>
+        </div>
 
-          {/* Live Network pill when inside the application */}
-          {!isLandingPage && (
-            <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-navy-900/90 border border-navy-800 text-[11px] font-mono text-slate-300 shadow-inner">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>NEAR Testnet</span>
-            </div>
-          )}
-
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1">
+        {/* Center: Clean Segmented Navigation Pill (No Icons) */}
+        <nav className="hidden lg:flex items-center justify-center whitespace-nowrap">
+          <div className="flex items-center gap-1 p-1 rounded-full bg-white/[0.03] border border-white/[0.07] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
             {isLandingPage ? (
-              // Marketing Landing Page Navigation
               marketingLinks.map((link) => (
                 <a
                   key={link.name}
                   href={link.href}
-                  className="px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-navy-900/60 transition-colors"
+                  className="px-4 py-1.5 rounded-full text-[13px] font-medium text-slate-300 hover:text-white hover:bg-white/[0.06] transition-all duration-150 whitespace-nowrap"
                 >
                   {link.name}
                 </a>
               ))
             ) : (
-              // In-App Navigation Links
               appNavLinks.map((link) => {
-                const Icon = link.icon;
-                const isActive = pathname === link.href;
+                const isActive =
+                  pathname === link.href ||
+                  (link.href !== "/dashboard" && pathname.startsWith(link.href));
                 return (
                   <Link
                     key={link.name}
                     href={link.href}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                    className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-all duration-150 whitespace-nowrap ${
                       isActive
-                        ? "bg-navy-850 text-white font-semibold shadow-sm border border-navy-750"
-                        : "text-slate-400 hover:text-white hover:bg-navy-900/60"
+                        ? "bg-gradient-to-b from-brand-500 to-brand-600 text-white shadow-[0_2px_12px_rgba(37,99,235,0.4),inset_0_1px_0_0_rgba(255,255,255,0.25)]"
+                        : "text-slate-400 hover:text-white hover:bg-white/[0.05]"
                     }`}
                   >
-                    <Icon className={`h-3.5 w-3.5 ${isActive ? "text-brand-400" : "text-slate-400"}`} />
-                    <span>{link.name}</span>
+                    {link.name}
                   </Link>
                 );
               })
             )}
-          </nav>
-        </div>
+          </div>
+        </nav>
 
-        {/* Right Section: Actions & Wallet State */}
-        <div className="flex items-center gap-3">
-          {/* Landing Page Action: Launch App Button */}
+        {/* Right: Session & Primary CTA */}
+        <div className="flex items-center gap-2.5 shrink-0 whitespace-nowrap">
           {isLandingPage ? (
-            <div className="flex items-center gap-3">
-              <Link
-                href="/dashboard"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-300 hover:text-white transition-colors"
+            <>
+              <a
+                href="https://docs.near.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:inline-flex items-center px-3.5 py-1.5 rounded-full text-[13px] font-medium text-slate-300 hover:text-white hover:bg-white/[0.05] transition-all whitespace-nowrap"
               >
-                <span>Documentation</span>
-                <ExternalLink className="h-3 w-3 text-slate-500" />
-              </Link>
+                Docs
+              </a>
 
               <Link
                 href="/dashboard"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white shadow-lg shadow-brand-600/30 hover:shadow-brand-600/40 transition-all active:scale-[0.98] border border-brand-400/30"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-semibold bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white shadow-[0_4px_20px_rgba(37,99,235,0.35),inset_0_1px_0_0_rgba(255,255,255,0.25)] transition-all active:scale-[0.98] whitespace-nowrap"
               >
-                <span>Launch Console</span>
+                <span>Launch App</span>
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
-            </div>
+            </>
           ) : (
             <>
-              {/* App Page Header: Network Status Pill */}
-              <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-navy-900/90 border border-navy-800 text-[11px] text-slate-300 font-mono">
-                <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="font-semibold text-slate-300">NEAR Testnet</span>
-              </div>
-
-              {/* Connected Wallet Capsule or Connect Button */}
               {!isConnected ? (
                 <button
                   onClick={() => connect()}
                   disabled={isConnecting}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-600/25 transition-all active:scale-[0.98] disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-semibold bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 hover:to-brand-500 text-white shadow-[0_4px_20px_rgba(37,99,235,0.35),inset_0_1px_0_0_rgba(255,255,255,0.25)] transition-all active:scale-[0.98] disabled:opacity-50 whitespace-nowrap"
                 >
-                  <Wallet className="h-3.5 w-3.5" />
                   <span>{isConnecting ? "Connecting..." : "Connect NEAR Wallet"}</span>
                 </button>
               ) : (
-                <div className="relative">
+                <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-navy-900/90 hover:bg-navy-850 border border-navy-800 hover:border-slate-700 transition-all text-xs font-medium text-white shadow-sm"
+                    className="inline-flex items-center gap-2 p-1 pl-3 pr-2.5 rounded-full bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.09] transition-all text-xs text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] whitespace-nowrap"
                   >
-                    <div className="h-2 w-2 rounded-full bg-emerald-400" />
-                    <span className="font-mono text-xs font-semibold text-slate-200 truncate max-w-[130px] sm:max-w-[170px]">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] shrink-0" />
+                    <span className="font-mono text-xs font-medium text-slate-200 truncate max-w-[120px] sm:max-w-[150px]">
                       {accountId}
                     </span>
-                    <span className="hidden sm:inline-block text-slate-600">|</span>
-                    <span className="hidden sm:inline-block text-[11px] font-mono text-brand-300 font-semibold">
+                    <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/[0.06] font-mono text-[11px] font-semibold text-brand-300">
                       {balance} NEAR
                     </span>
-                    <ChevronDown className="h-3.5 w-3.5 text-slate-400 ml-0.5" />
+                    <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-150 ${dropdownOpen ? "rotate-180" : ""}`} />
                   </button>
 
-                  {/* Dropdown Menu */}
                   {dropdownOpen && (
-                    <div 
-                      className="absolute right-0 mt-2.5 w-72 rounded-2xl bg-navy-900/95 border border-navy-750 p-3.5 shadow-2xl shadow-black/90 z-50 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl"
-                      onMouseLeave={() => setDropdownOpen(false)}
-                    >
-                      <div className="p-2 border-b border-navy-800/80 mb-2.5">
-                        <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block mb-0.5">
-                          Connected Account
-                        </span>
+                    <div className="absolute right-0 mt-2.5 w-72 rounded-2xl bg-[#0A0E17]/95 border border-white/[0.1] p-3.5 shadow-[0_20px_60px_rgba(0,0,0,0.85),inset_0_1px_0_0_rgba(255,255,255,0.08)] z-50 backdrop-blur-2xl">
+                      <div className="px-2.5 py-2 border-b border-white/[0.07] mb-2.5">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                            Active Account
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-mono">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                            NEAR Testnet
+                          </span>
+                        </div>
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-mono font-bold text-white truncate">
                             {accountId}
                           </span>
                           <button
                             onClick={copyAddress}
-                            className="text-slate-400 hover:text-white p-1 rounded transition-colors"
+                            className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-white/[0.06] transition-colors"
                             title="Copy account ID"
                           >
                             {copied ? (
@@ -223,9 +210,9 @@ export function Navbar() {
                         </div>
                       </div>
 
-                      <div className="p-2.5 bg-navy-950/70 rounded-xl mb-3 border border-navy-800/80 text-xs">
-                        <div className="flex justify-between items-center text-slate-300">
-                          <span className="text-[11px] text-slate-400">Available Balance</span>
+                      <div className="p-3 bg-white/[0.03] rounded-xl mb-2.5 border border-white/[0.06] text-xs">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] text-slate-400">Wallet Balance</span>
                           <div className="flex items-center gap-1.5">
                             <span className="font-mono font-bold text-brand-300 text-xs">
                               {balance} NEAR
@@ -233,8 +220,8 @@ export function Navbar() {
                             <button
                               onClick={() => refreshBalance()}
                               disabled={isFetchingBalance}
-                              title="Refresh live testnet balance"
-                              className="text-slate-500 hover:text-brand-300 transition-colors p-0.5"
+                              title="Refresh live balance"
+                              className="text-slate-400 hover:text-white transition-colors p-0.5"
                             >
                               <RotateCw className={`h-3 w-3 ${isFetchingBalance ? "animate-spin text-brand-400" : ""}`} />
                             </button>
@@ -242,12 +229,12 @@ export function Navbar() {
                         </div>
                       </div>
 
-                      <div className="space-y-1 text-xs">
+                      <div className="space-y-0.5 text-xs">
                         <a
                           href={`${NEAR_CONFIG.explorerUrl}/address/${accountId}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center justify-between p-2 rounded-xl text-slate-300 hover:bg-navy-800 hover:text-white transition-colors"
+                          className="flex items-center justify-between px-2.5 py-2 rounded-xl text-slate-300 hover:bg-white/[0.06] hover:text-white transition-colors"
                         >
                           <span>View on NEARBlocks</span>
                           <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
@@ -258,9 +245,9 @@ export function Navbar() {
                             setDropdownOpen(false);
                             connect();
                           }}
-                          className="w-full flex items-center justify-between p-2 rounded-xl text-brand-300 hover:bg-navy-800 transition-colors"
+                          className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-brand-300 hover:bg-white/[0.06] transition-colors"
                         >
-                          <span>Switch / Connect Another Wallet</span>
+                          <span>Switch Wallet</span>
                           <Wallet className="h-3.5 w-3.5 text-brand-400" />
                         </button>
 
@@ -269,7 +256,7 @@ export function Navbar() {
                             disconnect();
                             setDropdownOpen(false);
                           }}
-                          className="w-full flex items-center gap-2 p-2 rounded-xl text-rose-400 hover:bg-rose-950/30 transition-colors"
+                          className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-colors"
                         >
                           <LogOut className="h-3.5 w-3.5" />
                           <span>Disconnect Wallet</span>
@@ -282,11 +269,11 @@ export function Navbar() {
             </>
           )}
 
-          {/* Mobile Menu Toggle Button */}
+          {/* Mobile Menu Toggle */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-navy-900 border border-navy-800 transition-colors"
-            title="Toggle Navigation Menu"
+            className="lg:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] transition-all"
+            aria-label="Toggle navigation"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -295,7 +282,7 @@ export function Navbar() {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-navy-800 bg-navy-950/95 px-4 pt-3 pb-5 space-y-1.5 backdrop-blur-xl animate-in slide-in-from-top-2 duration-150">
+        <div className="lg:hidden border-t border-white/[0.08] bg-[#05070B]/95 px-4 pt-3 pb-5 space-y-1 backdrop-blur-2xl">
           {isLandingPage ? (
             <>
               {marketingLinks.map((link) => (
@@ -303,7 +290,7 @@ export function Navbar() {
                   key={link.name}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:bg-navy-900"
+                  className="block px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-300 hover:bg-white/[0.06] hover:text-white transition-colors"
                 >
                   {link.name}
                 </a>
@@ -312,30 +299,28 @@ export function Navbar() {
                 <Link
                   href="/dashboard"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-brand-600 text-white"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-xs font-semibold bg-gradient-to-b from-brand-500 to-brand-600 text-white shadow-md"
                 >
-                  <span>Launch Console</span>
+                  <span>Launch App</span>
                   <ArrowUpRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
             </>
           ) : (
             appNavLinks.map((link) => {
-              const Icon = link.icon;
               const isActive = pathname === link.href;
               return (
                 <Link
                   key={link.name}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                  className={`block px-3.5 py-2.5 rounded-xl text-xs font-medium transition-colors ${
                     isActive
-                      ? "bg-navy-850 text-brand-400 font-semibold border border-navy-750"
-                      : "text-slate-300 hover:bg-navy-900"
+                      ? "bg-brand-600 text-white font-semibold"
+                      : "text-slate-300 hover:bg-white/[0.06] hover:text-white"
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span>{link.name}</span>
+                  {link.name}
                 </Link>
               );
             })

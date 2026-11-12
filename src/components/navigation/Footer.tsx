@@ -1,62 +1,60 @@
-import Link from "next/link";
-import { Github, ExternalLink } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { PaySureLogo } from "@/components/brand/Logos";
 
 export function Footer() {
   return (
-    <footer className="w-full border-t border-navy-800 bg-navy-950 py-10 text-slate-400 text-xs">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-3">
-          <PaySureLogo size={24} />
-          <span className="font-semibold text-slate-200 text-sm">PaySure AI</span>
-          <span className="text-slate-600">|</span>
-          <span>Intelligent Stablecoin Payment Infrastructure</span>
+    <footer className="w-full border-t border-white/[0.06] bg-[#050507] py-10 text-zinc-500 text-xs">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-2.5 whitespace-nowrap">
+          <PaySureLogo size={20} />
+          <span className="font-semibold text-zinc-200 tracking-[-0.01em]">PaySure</span>
+          <span className="text-zinc-700">·</span>
+          <span className="text-zinc-500">Autonomous Treasury Infrastructure</span>
         </div>
 
-        <div className="flex items-center gap-6 text-slate-400">
+        <div className="flex flex-wrap items-center justify-center gap-6 text-zinc-400">
           <a
             href="https://docs.near.org"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-white transition-colors flex items-center gap-1"
+            className="hover:text-white transition-colors inline-flex items-center gap-1 whitespace-nowrap"
           >
-            <span>NEAR Docs</span>
-            <ExternalLink className="h-3 w-3" />
+            <span>Documentation</span>
+            <ArrowUpRight className="h-3 w-3 text-zinc-600" />
           </a>
           <a
             href="https://testnet.mynearwallet.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-white transition-colors flex items-center gap-1"
+            className="hover:text-white transition-colors inline-flex items-center gap-1 whitespace-nowrap"
           >
-            <span>NEAR Wallet & Faucet</span>
-            <ExternalLink className="h-3 w-3" />
+            <span>Wallet Selector</span>
+            <ArrowUpRight className="h-3 w-3 text-zinc-600" />
           </a>
           <a
             href="https://testnet.nearblocks.io"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-white transition-colors flex items-center gap-1"
+            className="hover:text-white transition-colors inline-flex items-center gap-1 whitespace-nowrap"
           >
-            <span>NEARBlocks Explorer</span>
-            <ExternalLink className="h-3 w-3" />
+            <span>NEARBlocks</span>
+            <ArrowUpRight className="h-3 w-3 text-zinc-600" />
           </a>
           <a
             href="https://near.org"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-white transition-colors flex items-center gap-1"
+            className="hover:text-white transition-colors inline-flex items-center gap-1 whitespace-nowrap"
           >
-            <span>NEAR Ecosystem</span>
-            <ExternalLink className="h-3 w-3" />
+            <span>NEAR Protocol</span>
+            <ArrowUpRight className="h-3 w-3 text-zinc-600" />
           </a>
         </div>
 
-        <div className="text-slate-500">
-          © {new Date().getFullYear()} PaySure AI. Built on NEAR Protocol.
+        <div className="text-zinc-600 whitespace-nowrap">
+          © {new Date().getFullYear()} PaySure. All rights reserved.
         </div>
       </div>
     </footer>
   );
 }
-

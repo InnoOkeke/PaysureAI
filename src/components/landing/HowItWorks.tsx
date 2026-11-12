@@ -1,140 +1,98 @@
 "use client";
 
 import { 
-  FileUp, 
-  ScanSearch, 
-  ShieldAlert, 
-  Send, 
-  FileCheck2, 
   Wallet,
-  ArrowRight,
-  CheckCircle2,
-  Lock,
   Cpu,
-  Layers
+  ShieldCheck,
+  Send,
+  ArrowRight
 } from "lucide-react";
 import Link from "next/link";
 
 export function HowItWorks() {
-  const pipeline = [
+  const stages = [
     {
       step: "01",
-      title: "Authenticated Protocol Ingress",
+      title: "Session Authentication",
       description:
-        "Connect any standard NEAR wallet (MyNearWallet, HOT Wallet, Meteor, Nightly, Sender). Session establishes cryptographic authorization with zero seed phrase exposure.",
+        "Connect any non-custodial NEAR wallet via the official Wallet Selector. Establishes an ed25519 session without exposing private keys.",
       icon: Wallet,
-      tag: "Session Auth",
-      badge: "Non-Custodial",
-      detail: "ed25519 Account Handshake"
+      detail: "Non-Custodial Handshake"
     },
     {
       step: "02",
-      title: "Multimodal OCR or NLP Intent",
+      title: "Payload Ingestion",
       description:
-        "Drop a vendor invoice (PDF/image) for neural extraction, or provide an intent prompt in plain English. PaySure strips malicious prompt injections instantly.",
+        "Upload a commercial invoice for zero-trust neural extraction or specify a settlement instruction in plain language.",
       icon: Cpu,
-      tag: "Deep OCR & NLP",
-      badge: "Zero-Trust",
-      detail: "Line-Items & Token Resolver"
+      detail: "Multimodal Extraction"
     },
     {
       step: "03",
-      title: "Confirmation of Payee & Guardrails",
+      title: "Counterparty Clearance",
       description:
-        "Real-time RPC query verifies counterparty authenticity and runs phonetic typosquatting defense. Treasury limits evaluate single-tx ceilings and 24h velocity.",
-      icon: ShieldAlert,
-      tag: "Defense Interceptor",
-      badge: "Deterministic",
-      detail: "4-Tier CoP Match Check"
+        "PaySure verifies the beneficiary on-chain, screens for lookalike typosquatting, and validates the transfer against active treasury limits.",
+      icon: ShieldCheck,
+      detail: "4-Tier CoP & Policy Check"
     },
     {
       step: "04",
-      title: "Sub-Second Settlement & PDF Receipt",
+      title: "Deterministic Finality",
       description:
-        "Sign directly for NEAR native settlement or trigger cross-chain Chain Signatures to Base or Ethereum. Receive an immutable, cryptographically verifiable PDF audit receipt.",
+        "Authorize the transaction for sub-second NEAR settlement or cross-chain MPC execution, generating a downloadable PDF audit certificate.",
       icon: Send,
-      tag: "Atomic Finality",
-      badge: "< 1.2s Nightshade",
-      detail: "NEARBlocks Hash & Audit PDF"
+      detail: "~1.1s Settlement & Receipt"
     },
   ];
 
   return (
-    <section id="how-it-works" className="py-24 sm:py-32 bg-navy-950 fintech-grid border-t border-navy-800/80 relative">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section id="how-it-works" className="py-24 sm:py-32 bg-[#050507] border-t border-white/[0.06] relative">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 text-brand-400 text-xs font-mono font-semibold mb-3 border border-brand-500/20">
-            <span>Execution Lifecycle</span>
-          </div>
-          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-[-0.03em] text-white">
-            How PaySure Operates in 4 Deterministic Stages.
+        <div className="max-w-2xl mb-16">
+          <span className="text-xs font-mono uppercase tracking-widest text-zinc-500 block mb-3">
+            Execution Workflow
+          </span>
+          <h2 className="text-3xl sm:text-5xl font-semibold tracking-[-0.035em] text-white leading-[1.1]">
+            From invoice to finality <br />
+            <span className="text-zinc-500">in four deterministic steps.</span>
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
-            From raw invoice document or human speech to cryptographic settlement on NEAR Protocol.
-          </p>
         </div>
 
-        {/* 4-Stage Connected Process Pipeline */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 relative">
-          {pipeline.map((stage, idx) => {
+        {/* 4-Stage Pipeline */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {stages.map((stage) => {
             const Icon = stage.icon;
             return (
               <div
                 key={stage.step}
-                className="group relative p-6 rounded-2xl bg-gradient-to-b from-navy-900/90 to-navy-950/90 border border-navy-750 hover:border-brand-500/40 transition-all duration-300 shadow-xl flex flex-col justify-between"
+                className="p-7 rounded-3xl bg-[#090B10] border border-white/[0.08] hover:border-white/[0.15] transition-colors flex flex-col justify-between"
               >
                 <div>
-                  {/* Step Eyebrow */}
-                  <div className="flex items-center justify-between mb-5">
-                    <span className="text-2xl font-mono font-extrabold text-brand-400/80 group-hover:text-brand-300 transition-colors">
-                      {stage.step}
+                  <div className="flex items-center justify-between mb-6">
+                    <span className="text-xs font-mono text-zinc-500">
+                      STAGE {stage.step}
                     </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-navy-950 text-slate-300 border border-navy-800">
-                      {stage.badge}
-                    </span>
+                    <div className="h-9 w-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white">
+                      <Icon className="h-4 w-4" />
+                    </div>
                   </div>
 
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-500/10 text-brand-400 border border-brand-500/20 mb-4 group-hover:scale-105 transition-transform">
-                    <Icon className="h-5 w-5" />
-                  </div>
-
-                  <h3 className="text-base font-bold text-white mb-2 tracking-tight">
+                  <h3 className="text-lg font-semibold text-white tracking-[-0.015em] mb-2.5">
                     {stage.title}
                   </h3>
-                  <p className="text-xs text-slate-300 leading-relaxed font-normal">
+                  <p className="text-sm text-zinc-400 leading-relaxed">
                     {stage.description}
                   </p>
                 </div>
 
-                {/* Bottom Technical Spec Pill */}
-                <div className="mt-6 pt-4 border-t border-navy-850 flex items-center justify-between text-[11px] font-mono text-slate-400">
-                  <span className="text-slate-500">{stage.tag}</span>
-                  <span className="text-brand-300 font-semibold">{stage.detail}</span>
+                <div className="mt-8 pt-4 border-t border-white/[0.06] text-[11px] font-mono text-zinc-500">
+                  {stage.detail}
                 </div>
               </div>
             );
           })}
-        </div>
-
-        {/* Bottom CTA Banner */}
-        <div className="mt-14 max-w-4xl mx-auto rounded-2xl bg-gradient-to-r from-navy-900/90 via-navy-850 to-navy-900/90 border border-navy-750 p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl">
-          <div className="space-y-1 text-center sm:text-left">
-            <h4 className="text-lg font-bold text-white tracking-tight">
-              Ready to automate corporate invoicing safely?
-            </h4>
-            <p className="text-xs text-slate-300 font-normal">
-              Connect your NEAR testnet account to experience zero-spoofing Confirmation of Payee.
-            </p>
-          </div>
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-semibold bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white shadow-lg shadow-brand-600/30 transition-all border border-brand-400/30 shrink-0"
-          >
-            <span>Launch Corporate Console</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
         </div>
 
       </div>

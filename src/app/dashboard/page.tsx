@@ -2,13 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { 
-  ShieldCheck, 
   Wallet, 
   FileUp, 
-  Send, 
-  Plus, 
-  ArrowRight, 
-  TrendingUp 
+  Send
 } from "lucide-react";
 import Link from "next/link";
 import { OverviewCards } from "@/components/dashboard/OverviewCards";
@@ -54,21 +50,14 @@ export default function DashboardPage() {
   }, [accountId]);
 
   return (
-    <div className="min-h-screen bg-[#070B14] py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-[#050507] py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
       {/* Top Banner / Welcome */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-navy-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/[0.08]">
         <div>
-          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wider text-brand-400">
-              Autonomous Invoicing &amp; Payments
-            </span>
-            <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-mono">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>NEAR Testnet Active</span>
-            </div>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <span className="text-xs font-semibold uppercase tracking-wider text-brand-400 block mb-1">
+            Autonomous Invoicing &amp; Payments
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
             Financial Dashboard
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
@@ -84,28 +73,28 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           {!isConnected ? (
             <button
               onClick={() => connect()}
               disabled={isConnecting}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/20 transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/20 transition-all whitespace-nowrap"
             >
               <Wallet className="h-4 w-4" />
               <span>{isConnecting ? "Connecting..." : "Connect NEAR Wallet"}</span>
             </button>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <Link
                 href="/invoices/upload"
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md shadow-brand-600/25 transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md shadow-brand-600/25 transition-all whitespace-nowrap"
               >
                 <FileUp className="h-3.5 w-3.5" />
                 <span>Upload Invoice</span>
               </Link>
               <Link
                 href="/pay"
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-navy-850 hover:bg-navy-800 text-slate-200 border border-navy-700 text-xs font-semibold transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 border border-white/[0.08] text-xs font-semibold transition-all whitespace-nowrap"
               >
                 <Send className="h-3.5 w-3.5 text-brand-400" />
                 <span>Send Payment</span>
@@ -122,7 +111,7 @@ export default function DashboardPage() {
       <QuickActions />
 
       {/* Main Grid: Outstanding Invoices & Recent Transactions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <OutstandingInvoices invoices={invoices} />
         <RecentTransactions payments={payments} />
       </div>

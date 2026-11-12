@@ -10,9 +10,9 @@ import { FloatingCopilot } from "@/components/assistant/FloatingCopilot";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "PaySure AI — Autonomous Invoicing & Confirmation of Payee on NEAR Protocol",
+  title: "PaySure — Autonomous Treasury & Counterparty Verification",
   description:
-    "AI-powered payment verification, Confirmation of Payee for named accounts, and intelligent invoice management on NEAR Protocol.",
+    "Cryptographic Confirmation of Payee, zero-trust invoice intelligence, and non-custodial multi-chain settlement on NEAR Protocol.",
 };
 
 export default function RootLayout({
@@ -22,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} min-h-screen flex flex-col bg-[#070B14] text-slate-100 antialiased`}>
+      <body className={`${inter.className} min-h-screen flex flex-col bg-[#050507] text-[#F5F5F7] antialiased selection:bg-blue-500/25 selection:text-white`}>
         <Web3Provider>
           <Navbar />
           <main className="flex-1">{children}</main>

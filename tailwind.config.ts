@@ -13,11 +13,12 @@ const config: Config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         navy: {
-          950: "#070B14",
-          900: "#0B1120",
-          850: "#0F172A",
-          800: "#1E293B",
-          700: "#334155",
+          950: "#05070B",
+          900: "#0A0D14",
+          850: "#0F141F",
+          800: "#171E2E",
+          750: "#1E273B",
+          700: "#28334A",
           600: "#475569",
         },
         brand: {

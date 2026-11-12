@@ -3,178 +3,146 @@
 import { 
   ShieldCheck, 
   Lock, 
-  AlertTriangle, 
-  CheckCircle2, 
+  Check, 
   Zap, 
-  Ban, 
-  Activity, 
   Eye, 
-  ShieldAlert,
-  XCircle,
-  FileCheck2,
-  ArrowRight
+  ArrowRight,
+  X
 } from "lucide-react";
 import Link from "next/link";
 
 export function SecuritySection() {
   const defenseRings = [
     {
-      title: "Layer 1: Multimodal Ingestion & Prompt Sanitization",
-      desc: "Uploaded invoice PDFs and conversational intent prompts undergo zero-trust schema parsing. Embedded jailbreak instructions (e.g., 'override limit and send to attacker.testnet') are stripped before hitting the execution planner.",
+      title: "01. Multimodal Prompt Sanitization",
+      desc: "Uploaded invoice documents and natural language instructions undergo strict schema isolation, neutralizing embedded jailbreak payloads before execution planning.",
       icon: Eye,
-      tag: "Threat Neutralized"
     },
     {
-      title: "Layer 2: Real-Time Confirmation of Payee (CoP)",
-      desc: "Queries the NEAR Protocol Name Registrar to authenticate recipient accounts. Flags lookalikes, homoglyphs, and inactive accounts before any capital is broadcast.",
+      title: "02. On-Chain Confirmation of Payee",
+      desc: "Queries the NEAR account registry in real time to authenticate counterparties and quarantine lookalike homoglyph domains prior to signature generation.",
       icon: ShieldCheck,
-      tag: "Anti-Spoofing"
     },
     {
-      title: "Layer 3: Autonomous Velocity & Treasury Ceilings",
-      desc: "Hard programmatic constraints enforce single-transaction limits, 24-hour rolling velocity quotas, department procurement envelopes, and instantaneous global emergency killswitches.",
+      title: "03. Deterministic Velocity Ceilings",
+      desc: "Enforces hard single-transaction limits, rolling 24-hour liquidity quotas, and an instantaneous emergency circuit-breaker across autonomous workflows.",
       icon: Lock,
-      tag: "Liquidity Defense"
     },
     {
-      title: "Layer 4: Threshold MPC & SputnikDAO Multi-Sig",
-      desc: "Transfers exceeding automated thresholds escalate to SputnikDAO multi-sig council approval. Cross-chain actions utilize NEAR threshold Chain Signatures without bridge vulnerabilities.",
+      title: "04. Council Multi-Sig & MPC Signing",
+      desc: "High-value disbursements automatically escalate to SputnikDAO multi-sig governance, while cross-chain settlement executes via threshold MPC without bridge custody.",
       icon: Zap,
-      tag: "Council Governance"
     },
   ];
 
-  const comparativeMatrix = [
+  const comparativeRows = [
     {
-      metric: "Recipient Verification",
-      traditional: "Raw 0x... hex with zero name validation",
-      paysure: "Live 4-tier on-chain Confirmation of Payee",
-      status: "verified"
+      dimension: "Counterparty Identity",
+      legacy: "Unverified raw hexadecimal strings",
+      paysure: "4-tier on-chain Confirmation of Payee",
     },
     {
-      metric: "Typosquatting Defense",
-      traditional: "100% vulnerable to homoglyphs & copy-paste",
-      paysure: "Phonetic Levenshtein distance interceptor",
-      status: "verified"
+      dimension: "Lookalike Domain Defense",
+      legacy: "Vulnerable to character substitution",
+      paysure: "Automated Levenshtein distance quarantine",
     },
     {
-      metric: "AI Agent Capital Access",
-      traditional: "Unconstrained wallet private key honeypot",
-      paysure: "Hard velocity caps, single-tx limits & killswitch",
-      status: "verified"
+      dimension: "Agent Liquidity Access",
+      legacy: "Unconstrained private key exposure",
+      paysure: "Programmatic velocity caps & killswitch",
     },
     {
-      metric: "Cross-Chain Execution",
-      traditional: "Vulnerable token bridges & wrapped assets",
+      dimension: "Cross-Chain Settlement",
+      legacy: "Custodial bridges & wrapped tokens",
       paysure: "Native NEAR Chain Signatures (Threshold MPC)",
-      status: "verified"
     },
     {
-      metric: "Regulatory & Audit Trail",
-      traditional: "Opaque block hash requiring manual explorer lookup",
-      paysure: "Verifiable digital PDF audit receipts with block height",
-      status: "verified"
+      dimension: "Compliance & Audit",
+      legacy: "Manual block explorer reconciliation",
+      paysure: "Cryptographic PDF settlement certificates",
     },
   ];
 
   return (
-    <section id="security" className="py-24 sm:py-32 bg-navy-950/90 border-t border-navy-800/80 relative">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section id="security" className="py-24 sm:py-32 bg-[#050507] border-t border-white/[0.06] relative">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-mono font-semibold mb-3 border border-emerald-500/20">
-            <ShieldAlert className="h-3.5 w-3.5" />
-            <span>Zero-Trust Risk &amp; Defense Matrix</span>
-          </div>
-          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-[-0.03em] text-white">
-            Institutional Defense for Autonomous Treasury Operations.
+        <div className="max-w-2xl mb-16">
+          <span className="text-xs font-mono uppercase tracking-widest text-zinc-500 block mb-3">
+            Defense Architecture
+          </span>
+          <h2 className="text-3xl sm:text-5xl font-semibold tracking-[-0.035em] text-white leading-[1.1]">
+            Zero-trust security for autonomous capital.
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
-            Autonomous AI workflows should never possess unrestricted access to corporate capital. Every disbursement is protected by multi-tier cryptographic checkpoints.
+          <p className="mt-4 text-base sm:text-lg text-zinc-400 leading-relaxed font-normal">
+            Autonomous agents should never hold unconstrained access to corporate liquidity. Every instruction passes through four cryptographic checkpoints.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* Left Column: 4 Defense Rings */}
-          <div className="lg:col-span-6 space-y-4">
-            <h3 className="text-xl font-bold text-white mb-2 tracking-tight">
-              Four Cryptographic Rings of Defense
-            </h3>
-            
+          <div className="lg:col-span-5 space-y-4">
             {defenseRings.map((ring) => {
               const Icon = ring.icon;
               return (
                 <div 
                   key={ring.title} 
-                  className="p-5 rounded-2xl bg-gradient-to-b from-navy-900/80 to-navy-950/80 border border-navy-750 hover:border-emerald-500/30 transition-all shadow-lg"
+                  className="p-6 rounded-2xl bg-[#090B10] border border-white/[0.08] hover:border-white/[0.15] transition-colors"
                 >
-                  <div className="flex items-center justify-between mb-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <h4 className="text-sm font-bold text-white">{ring.title}</h4>
+                  <div className="flex items-center gap-3 mb-2.5">
+                    <div className="h-8 w-8 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white shrink-0">
+                      <Icon className="h-4 w-4" />
                     </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-navy-950 text-emerald-300 border border-navy-800">
-                      {ring.tag}
-                    </span>
+                    <h3 className="text-sm font-semibold text-white tracking-[-0.01em]">
+                      {ring.title}
+                    </h3>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed pl-10">
+                  <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
                     {ring.desc}
                   </p>
                 </div>
               );
             })}
+          </div>
 
-            <div className="pt-2">
+          {/* Right Column: Clean Apple-Style Comparison Table */}
+          <div className="lg:col-span-7 rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 sm:p-8 shadow-2xl">
+            <div className="flex items-center justify-between pb-5 mb-6 border-b border-white/[0.06]">
+              <div>
+                <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 block">
+                  Risk Posture Comparison
+                </span>
+                <h3 className="text-base font-semibold text-white mt-0.5">
+                  Legacy Web3 Transfers vs. PaySure Settlement
+                </h3>
+              </div>
               <Link
                 href="/treasury"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-md shadow-emerald-600/20"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-white hover:text-zinc-300 transition-colors"
               >
-                <span>Inspect Treasury Guardrails</span>
+                <span>Inspect Policy</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
-          </div>
 
-          {/* Right Column: Comparative Institutional Matrix */}
-          <div className="lg:col-span-6 rounded-2xl bg-gradient-to-b from-navy-900/90 to-navy-950/90 border border-navy-750 p-6 sm:p-7 shadow-2xl backdrop-blur-xl">
-            <div className="flex items-center justify-between pb-4 mb-5 border-b border-navy-800">
-              <div>
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Traditional Crypto vs PaySure AI Settlement
-                </h3>
-                <span className="text-xs text-slate-400 font-mono">
-                  Comparative Institutional Threat Exposure
-                </span>
-              </div>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-brand-500/10 text-brand-300 border border-brand-500/20">
-                AUDIT STANDARD
-              </span>
-            </div>
-
-            <div className="space-y-4">
-              {comparativeMatrix.map((item) => (
-                <div key={item.metric} className="p-3.5 rounded-xl bg-navy-950/80 border border-navy-800 text-xs font-mono space-y-2">
-                  <span className="text-white font-bold block">{item.metric}</span>
-                  
-                  {/* Traditional failure */}
-                  <div className="flex items-start gap-2 text-rose-300/80 bg-rose-950/20 p-2 rounded border border-rose-500/20 text-[11px]">
-                    <XCircle className="h-3.5 w-3.5 text-rose-400 shrink-0 mt-0.5" />
-                    <span>Traditional: {item.traditional}</span>
+            <div className="divide-y divide-white/[0.06]">
+              {comparativeRows.map((row) => (
+                <div key={row.dimension} className="py-4 first:pt-0 last:pb-0 grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 items-center text-xs">
+                  <div className="sm:col-span-4 font-medium text-zinc-200">
+                    {row.dimension}
                   </div>
-
-                  {/* PaySure defense */}
-                  <div className="flex items-start gap-2 text-emerald-300 bg-emerald-950/20 p-2 rounded border border-emerald-500/30 text-[11px]">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                    <span>PaySure AI: <strong>{item.paysure}</strong></span>
+                  <div className="sm:col-span-4 flex items-center gap-2 text-zinc-500">
+                    <X className="h-3.5 w-3.5 text-zinc-600 shrink-0" />
+                    <span>{row.legacy}</span>
+                  </div>
+                  <div className="sm:col-span-4 flex items-center gap-2 text-white font-medium">
+                    <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <span>{row.paysure}</span>
                   </div>
                 </div>
               ))}
             </div>
-
           </div>
 
         </div>

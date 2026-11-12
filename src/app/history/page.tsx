@@ -10,21 +10,35 @@ import {
   Filter, 
   Search, 
   FileText,
-  Send
+  Send,
+  Wallet
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { formatAddress, formatCurrency } from "@/lib/utils";
 import { NEAR_CONFIG } from "@/lib/near/config";
+import { useNearWallet } from "@/context/NearWalletContext";
 
 export default function HistoryPage() {
+  const { accountId, isConnected } = useNearWallet();
   const [payments, setPayments] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [viewScope, setViewScope] = useState<"mine" | "all">("mine");
 
   useEffect(() => {
     async function loadPayments() {
       try {
-        const res = await fetch("/api/payments");
+        setLoading(true);
+        let url = "/api/payments";
+        if (viewScope === "mine" && accountId) {
+          url += `?accountId=${encodeURIComponent(accountId)}`;
+        } else if (viewScope === "all") {
+          url += `?scope=all`;
+        } else if (!accountId) {
+          // If no wallet is connected, show empty rather than dumping random accounts
+          url += `?accountId=none`;
+        }
+        const res = await fetch(url);
         const data = await res.json();
         setPayments(data.payments || []);
       } catch (err) {
@@ -34,7 +48,7 @@ export default function HistoryPage() {
       }
     }
     loadPayments();
-  }, []);
+  }, [accountId, viewScope]);
 
   const downloadReceipt = (p: any) => {
     const doc = new jsPDF();
@@ -72,6 +86,7 @@ export default function HistoryPage() {
     return (
       p.transactionHash.toLowerCase().includes(search.toLowerCase()) ||
       p.recipientAddress.toLowerCase().includes(search.toLowerCase()) ||
+      (p.senderAddress && p.senderAddress.toLowerCase().includes(search.toLowerCase())) ||
       (p.invoiceReference && p.invoiceReference.toLowerCase().includes(search.toLowerCase()))
     );
   });
@@ -82,20 +97,51 @@ export default function HistoryPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-navy-800">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Transaction History & Receipts
+            Transaction History &amp; Receipts
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Complete verifiable ledger of all payments executed on NEAR Protocol.
+            {isConnected ? (
+              <span>Scoped to connected account: <strong className="text-brand-300 font-mono">{accountId}</strong></span>
+            ) : (
+              <span>Complete verifiable ledger of payments executed on NEAR Protocol.</span>
+            )}
           </p>
         </div>
 
-        <Link
-          href="/pay"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md shadow-brand-600/20 transition-all w-fit"
-        >
-          <Send className="h-4 w-4" />
-          <span>New Payment</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          {isConnected && (
+            <div className="flex p-1 rounded-xl bg-navy-900 border border-navy-800 text-xs">
+              <button
+                onClick={() => setViewScope("mine")}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                  viewScope === "mine"
+                    ? "bg-brand-600 text-white"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                My Transactions
+              </button>
+              <button
+                onClick={() => setViewScope("all")}
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                  viewScope === "all"
+                    ? "bg-brand-600 text-white"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                All Network
+              </button>
+            </div>
+          )}
+
+          <Link
+            href="/pay"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md shadow-brand-600/20 transition-all w-fit"
+          >
+            <Send className="h-4 w-4" />
+            <span>New Payment</span>
+          </Link>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -106,7 +152,7 @@ export default function HistoryPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by Tx hash, payee, or invoice reference..."
+            placeholder="Search by Tx hash, payee, sender, or ref..."
             className="w-full bg-navy-950 border border-navy-800 rounded-xl pl-10 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 font-mono"
           />
         </div>
@@ -121,7 +167,11 @@ export default function HistoryPage() {
           <History className="h-10 w-10 text-slate-600 mx-auto mb-3" />
           <h3 className="text-base font-bold text-white">No Payments Recorded</h3>
           <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-            Once you execute a payment on NEAR Testnet, confirmed records and PDF receipts will be listed here.
+            {isConnected ? (
+              <span>Your connected wallet (<strong>{accountId}</strong>) has not executed any payments yet.</span>
+            ) : (
+              <span>Connect your NEAR wallet to view your personalized payment history and download receipts.</span>
+            )}
           </p>
         </div>
       ) : (
@@ -150,6 +200,8 @@ export default function HistoryPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 font-mono">
+                  <span>Sender: {p.senderAddress}</span>
+                  <span>&bull;</span>
                   <span>Tx: {formatAddress(p.transactionHash, 8)}</span>
                   <span>&bull;</span>
                   <span>{new Date(p.createdAt).toLocaleString()}</span>

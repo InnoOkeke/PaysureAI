@@ -5,6 +5,8 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const txHash = searchParams.get("txHash");
+    const accountId = searchParams.get("accountId")?.toLowerCase().trim();
+    const scope = searchParams.get("scope"); // "all" to view entire testnet ledger
 
     if (txHash) {
       const payment = await prisma.payment.findUnique({
@@ -14,7 +16,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ payment });
     }
 
+    // If an accountId is provided and scope is not explicitly "all", filter to that account
+    let where: any = undefined;
+    if (accountId && scope !== "all") {
+      where = {
+        OR: [
+          { senderAddress: accountId },
+          { recipientAddress: accountId },
+        ],
+      };
+    } else if (!accountId && scope !== "all") {
+      // If no account is connected and scope != all, return empty
+      where = { id: "none" };
+    }
+
     const payments = await prisma.payment.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       include: { receipt: true, invoice: true },
     });
@@ -32,7 +49,7 @@ export async function POST(req: NextRequest) {
       senderAddress,
       recipientAddress,
       amount,
-      tokenAddress,
+      tokenAddress = "native.near",
       transactionHash,
       invoiceId,
       invoiceReference,
@@ -60,7 +77,7 @@ export async function POST(req: NextRequest) {
         senderAddress: senderAddress.toLowerCase(),
         recipientAddress: recipientAddress.toLowerCase(),
         amount: parseFloat(amount),
-        tokenAddress: tokenAddress || "0x456569838f1d43009A91ebA4263147Afd7233483",
+        tokenAddress: tokenAddress || "native.near",
         transactionHash,
         invoiceId: invoiceId || null,
         invoiceReference: invoiceReference || null,
@@ -72,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     // Generate unique verifiable receipt
     const receiptNumber =
-      "RCP-" + Date.now().toString(36).toUpperCase() + "-" + transactionHash.slice(2, 8).toUpperCase();
+      "RCP-" + Date.now().toString(36).toUpperCase() + "-" + transactionHash.slice(0, 6).toUpperCase();
 
     const receipt = await prisma.receipt.create({
       data: {
@@ -101,4 +118,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

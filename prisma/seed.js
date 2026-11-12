@@ -2,14 +2,28 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Seeding PaySure AI database for NEAR Protocol...");
+  console.log("Seeding PaySure AI database for NEAR Protocol (zero demo payments)...");
 
-  // Clear existing records
-  await prisma.receipt.deleteMany();
-  await prisma.payment.deleteMany();
-  await prisma.invoice.deleteMany();
-  await prisma.recipient.deleteMany();
+  // Clean up any legacy demo payments
+  await prisma.receipt.deleteMany({
+    where: {
+      payment: {
+        senderAddress: {
+          in: ["paysure-treasury.testnet", "company.testnet", "demo.testnet"],
+        },
+      },
+    },
+  });
 
+  await prisma.payment.deleteMany({
+    where: {
+      senderAddress: {
+        in: ["paysure-treasury.testnet", "company.testnet", "demo.testnet"],
+      },
+    },
+  });
+
+  // 1. Seed Verified Recipients with NEAR Named Accounts for Confirmation of Payee
   const r1 = await prisma.recipient.upsert({
     where: { paymentId: "acme-design" },
     create: {
@@ -21,6 +35,7 @@ async function main() {
     },
     update: {
       walletAddress: "acme-design.testnet",
+      verificationStatus: "VERIFIED",
     },
   });
 
@@ -35,6 +50,7 @@ async function main() {
     },
     update: {
       walletAddress: "satoshi-dev.testnet",
+      verificationStatus: "VERIFIED",
     },
   });
 
@@ -49,10 +65,12 @@ async function main() {
     },
     update: {
       walletAddress: "apex-media.testnet",
+      verificationStatus: "WARNING",
     },
   });
 
-  const inv1 = await prisma.invoice.create({
+  // 2. Realistic Outstanding Invoices for Payee Testing
+  await prisma.invoice.create({
     data: {
       invoiceNumber: "INV-2026-9042",
       recipientId: r1.id,
@@ -66,7 +84,7 @@ async function main() {
     },
   });
 
-  const inv2 = await prisma.invoice.create({
+  await prisma.invoice.create({
     data: {
       invoiceNumber: "INV-2026-8812",
       recipientId: r2.id,
@@ -80,53 +98,7 @@ async function main() {
     },
   });
 
-  const inv3 = await prisma.invoice.create({
-    data: {
-      invoiceNumber: "INV-2026-5120",
-      recipientId: r1.id,
-      recipientName: r1.displayName,
-      recipientAddress: r1.walletAddress,
-      amount: 50.0,
-      token: "NEAR",
-      dueDate: "2026-11-10",
-      description: "NEAR Design Systems Maintenance & Icons",
-      status: "PAID",
-    },
-  });
-
-  const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-  let txHash = "";
-  for (let i = 0; i < 44; i++) {
-    txHash += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-
-  await prisma.user.upsert({
-    where: { walletAddress: "company.testnet" },
-    create: { walletAddress: "company.testnet" },
-    update: {},
-  });
-
-  await prisma.payment.create({
-    data: {
-      senderAddress: "company.testnet",
-      recipientAddress: r1.walletAddress,
-      amount: 50.0,
-      tokenAddress: "NEAR",
-      transactionHash: txHash,
-      invoiceId: inv3.id,
-      invoiceReference: inv3.invoiceNumber,
-      network: "NEAR Protocol (Testnet)",
-      chainId: 0,
-      status: "SUCCESS",
-      receipt: {
-        create: {
-          receiptNumber: "RCP-2026-NEAR-5120",
-        },
-      },
-    },
-  });
-
-  console.log("✓ Database seeded successfully for NEAR Protocol!");
+  console.log("✓ Database seeded successfully with real recipients and zero demo payments!");
 }
 
 main()

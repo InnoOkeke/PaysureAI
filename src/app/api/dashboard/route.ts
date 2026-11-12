@@ -1,19 +1,33 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const accountId = searchParams.get("accountId")?.toLowerCase().trim();
+
+    // If an account is specified, filter payments strictly to that connected wallet.
+    // If no account is connected, return zero volume/payments so unauthenticated views don't leak global or demo payments.
+    const paymentWhere = accountId
+      ? { senderAddress: accountId }
+      : { id: "none" }; // matches nothing if no account connected
+
     const [invoices, payments, recipients] = await Promise.all([
       prisma.invoice.findMany({
         orderBy: { createdAt: "desc" },
         take: 10,
+        include: { recipient: true },
       }),
-      prisma.payment.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 10,
-      }),
+      accountId
+        ? prisma.payment.findMany({
+            where: paymentWhere,
+            orderBy: { createdAt: "desc" },
+            take: 10,
+            include: { receipt: true, invoice: true },
+          })
+        : Promise.resolve([]),
       prisma.recipient.findMany(),
     ]);
 
@@ -39,6 +53,7 @@ export async function GET() {
       invoices,
       payments,
       recipientsCount: recipients.length,
+      connectedAccount: accountId || null,
     });
   } catch (error: any) {
     console.error("Dashboard API error:", error);
@@ -58,4 +73,3 @@ export async function GET() {
     );
   }
 }
-

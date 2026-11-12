@@ -5,7 +5,26 @@ export const dynamic = "force-dynamic";
 
 export async function POST() {
   try {
-    // 1. Seed Recipients with NEAR Named Accounts
+    // Clean up any legacy mock/demo payments
+    await prisma.receipt.deleteMany({
+      where: {
+        payment: {
+          senderAddress: {
+            in: ["paysure-treasury.testnet", "company.testnet", "demo.testnet"],
+          },
+        },
+      },
+    });
+
+    await prisma.payment.deleteMany({
+      where: {
+        senderAddress: {
+          in: ["paysure-treasury.testnet", "company.testnet", "demo.testnet"],
+        },
+      },
+    });
+
+    // 1. Seed Verified Recipients with NEAR Named Accounts for Confirmation of Payee
     const r1 = await prisma.recipient.upsert({
       where: { paymentId: "acme-design" },
       create: {
@@ -17,6 +36,7 @@ export async function POST() {
       },
       update: {
         walletAddress: "acme-design.testnet",
+        verificationStatus: "VERIFIED",
       },
     });
 
@@ -31,6 +51,7 @@ export async function POST() {
       },
       update: {
         walletAddress: "satoshi-dev.testnet",
+        verificationStatus: "VERIFIED",
       },
     });
 
@@ -45,10 +66,11 @@ export async function POST() {
       },
       update: {
         walletAddress: "apex-media.testnet",
+        verificationStatus: "WARNING",
       },
     });
 
-    // 2. Seed Invoices
+    // 2. Seed Realistic Unpaid Invoices for Testing Payee Verification & Payment
     const inv1 = await prisma.invoice.create({
       data: {
         invoiceNumber: "INV-2026-9042",
@@ -77,61 +99,12 @@ export async function POST() {
       },
     });
 
-    const inv3 = await prisma.invoice.create({
-      data: {
-        invoiceNumber: "INV-2026-5120",
-        recipientId: r1.id,
-        recipientName: r1.displayName,
-        recipientAddress: r1.walletAddress,
-        amount: 50.0,
-        token: "NEAR",
-        dueDate: "2026-11-10",
-        description: "NEAR Design Systems Maintenance & Icons",
-        status: "PAID",
-      },
-    });
-
-    // 3. Seed Completed Payment & Receipt
-    const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-    let txHash = "";
-    for (let i = 0; i < 44; i++) {
-      txHash += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-
-    await prisma.user.upsert({
-      where: { walletAddress: "paysure-treasury.testnet" },
-      create: { walletAddress: "paysure-treasury.testnet" },
-      update: {},
-    });
-
-    const payment = await prisma.payment.create({
-      data: {
-        senderAddress: "paysure-treasury.testnet",
-        recipientAddress: r1.walletAddress,
-        amount: 50.0,
-        tokenAddress: "native.near",
-        transactionHash: txHash,
-        invoiceId: inv3.id,
-        invoiceReference: inv3.invoiceNumber,
-        network: "NEAR Testnet",
-        chainId: 0,
-        status: "SUCCESS",
-        receipt: {
-          create: {
-            receiptNumber: "RCP-2026-NEAR-5120",
-          },
-        },
-      },
-      include: { receipt: true },
-    });
-
     return NextResponse.json({
       success: true,
-      message: "Database successfully seeded with realistic NEAR testnet data!",
+      message: "Database seeded with clean NEAR recipient registry. Zero demo payments, 100% real on-chain actions.",
       data: {
         recipients: [r1, r2, r3],
-        invoices: [inv1, inv2, inv3],
-        payment,
+        invoices: [inv1, inv2],
       },
     });
   } catch (error: any) {

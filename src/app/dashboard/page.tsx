@@ -35,7 +35,11 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const res = await fetch("/api/dashboard");
+        setLoading(true);
+        const url = accountId
+          ? `/api/dashboard?accountId=${encodeURIComponent(accountId)}`
+          : "/api/dashboard";
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
           setStats(data.stats || {});
@@ -58,7 +62,7 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-brand-400">
-              Autonomous Invoicing & Payments
+              Autonomous Invoicing &amp; Payments
             </span>
             <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
             <span className="text-xs text-slate-400">NEAR Protocol</span>
@@ -67,7 +71,15 @@ export default function DashboardPage() {
             Financial Dashboard
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Manage your NEAR payments, verify counterparties with Confirmation of Payee, and track audit trails.
+            {isConnected ? (
+              <span>
+                Connected as <strong className="text-brand-300 font-mono">{accountId}</strong> (Balance: {balance} NEAR). Real testnet transactions and verification.
+              </span>
+            ) : (
+              <span>
+                Connect your NEAR wallet to manage payments, verify counterparties with Confirmation of Payee, and track live audit trails.
+              </span>
+            )}
           </p>
         </div>
 

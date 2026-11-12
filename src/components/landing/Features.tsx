@@ -14,44 +14,44 @@ export function Features() {
     {
       title: "Confirmation of Payee",
       description:
-        "Query on-chain identity registers before transferring a single token. Prevent fat-finger mistakes, copy-paste malware, and invoice fraud with four-tier status checks (Verified, Warning, Unverified, Mismatch).",
+        "Query on-chain identity registers before transferring a single token. Eliminates lookalike typosquatting (satosh1.near vs satoshi.near) with live 4-tier status checks (Verified, Warning, Unverified, Mismatch).",
       icon: ShieldCheck,
-      badge: "Security Standard",
+      badge: "Track: AI Security",
     },
     {
-      title: "AI Invoice Extraction",
+      title: "Conversational Multi-Chain Intents",
       description:
-        "Upload invoices in PDF, PNG, or JPG. Our AI agent parses invoice numbers, amounts, due dates, itemized breakdowns, and recipient addresses into clean, validated, editable review forms.",
-      icon: Cpu,
-      badge: "Intelligent Agent",
-    },
-    {
-      title: "Native NEAR & NEP-141 Rails",
-      description:
-        "Engineered natively for NEAR Protocol with human-readable named accounts (*.near, *.testnet). Features sub-second finality, micro-penny transaction fees, and instant receipt settlement.",
-      icon: Coins,
-      badge: "NEAR Protocol",
-    },
-    {
-      title: "Verifiable Digital Receipts",
-      description:
-        "Generate audit-ready, cryptographically verifiable PDF receipts for every confirmed payment. Includes sender, payee, timestamp, invoice reference, and direct block explorer link.",
-      icon: Receipt,
-      badge: "Compliance Ready",
-    },
-    {
-      title: "Context-Aware Payment Copilot",
-      description:
-        "Ask questions about your finances: 'Which invoices are due this week?', 'Explain why recipient 0x3a... is unverified', or 'Summarize my November payouts'. Powered by your verified on-chain history.",
+        "Execute payments in plain English: 'Send $50 to John Kennedy on Base' or 'Pay Acme Design 75 NEAR'. Translates human prompts into verified, policy-checked cross-chain intents.",
       icon: Sparkles,
-      badge: "AI Assistant",
+      badge: "Track: NEAR Intents",
     },
     {
-      title: "Zero-Trust Architecture",
+      title: "Autonomous Treasury Guardrails",
       description:
-        "AI never signs transactions and never independently touches private keys. You retain full cryptographic control at every step with explicit MetaMask signature prompts.",
+        "Institutional policy engine with single-tx ceilings, rolling 24-hour velocity caps, department procurement budgets, and instant emergency killswitches for AI disbursements.",
       icon: Lock,
-      badge: "Non-Custodial",
+      badge: "Track: Autonomous Business",
+    },
+    {
+      title: "Multimodal AI Invoicing & OCR",
+      description:
+        "Upload invoices in PDF, PNG, or JPG. Zero-trust prompt-injection defense extracts line items, due dates, totals, and recipient accounts into editable reconciliation drafts.",
+      icon: Cpu,
+      badge: "Track: Real-World Money",
+    },
+    {
+      title: "NEAR Chain Signatures (MPC)",
+      description:
+        "Leverages NEAR's threshold MPC network (v1.signer-prod.testnet) to derive addresses and sign transactions on Base, Ethereum, and Solana without bridging or wrap tokens.",
+      icon: Coins,
+      badge: "Cross-Chain Rail",
+    },
+    {
+      title: "Universal NEAR Wallet Support",
+      description:
+        "Native multi-wallet support powered by official NEAR Wallet Selector. Connect effortlessly with MyNearWallet, HERE / HOT Wallet, Nightly, Meteor, and Sender.",
+      icon: Receipt,
+      badge: "Ecosystem Standard",
     },
   ];
 

@@ -5,7 +5,7 @@ import { ArrowRight, ShieldCheck, CheckCircle2, TrendingUp, Sparkles, FileText, 
 import { useNearWallet } from "@/context/NearWalletContext";
 
 export function Hero() {
-  const { isConnected, connect, isConnecting } = useNearWallet();
+  const { isConnected, accountId, connect, isConnecting } = useNearWallet();
 
   return (
     <section className="relative overflow-hidden pt-12 pb-20 sm:pt-20 sm:pb-28">
@@ -15,17 +15,24 @@ export function Hero() {
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
+          {/* Track Badges */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 text-brand-300 text-xs font-semibold mb-6 border border-brand-500/20 backdrop-blur-sm shadow-sm shadow-brand-500/10">
+            <Sparkles className="h-3.5 w-3.5 text-brand-400" />
+            <span>NEAR Hackathon: Real-World Money • AI Security &amp; Defense • Autonomous Business</span>
+          </div>
+
           {/* Main Title */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1]">
-            Make Every Web3 <br />
+            Autonomous Invoicing &amp; <br />
             <span className="bg-gradient-to-r from-brand-400 via-brand-accent to-emerald-400 bg-clip-text text-transparent">
-              Payment Count.
-            </span>
+              Confirmation of Payee
+            </span>{" "}
+            on NEAR.
           </h1>
 
           {/* Subtitle */}
           <p className="mt-6 text-lg sm:text-xl text-slate-300 max-w-2xl font-normal leading-relaxed">
-            AI-powered payment verification and intelligent invoice management on <span className="text-brand-300 font-medium">NEAR Protocol</span>. Verify human-readable accounts instantly, and never send funds blindly again.
+            Eliminate invoice fraud and safeguard AI-controlled capital. PaySure AI pairs on-chain named account verification, conversational multi-chain intents, and institutional treasury guardrails on <span className="text-brand-300 font-semibold">NEAR Protocol</span>.
           </p>
 
           {/* Action CTAs */}
@@ -35,7 +42,7 @@ export function Hero() {
                 href="/dashboard"
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-600/30 transition-all active:scale-[0.98]"
               >
-                <span>Launch Dashboard</span>
+                <span>Launch Dashboard ({accountId})</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
             ) : (
@@ -44,16 +51,45 @@ export function Hero() {
                 disabled={isConnecting}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-lg shadow-brand-600/30 transition-all active:scale-[0.98]"
               >
-                <span>{isConnecting ? "Connecting..." : "Get Started • Connect NEAR"}</span>
+                <Wallet className="h-5 w-5" />
+                <span>{isConnecting ? "Connecting..." : "Connect NEAR Wallet"}</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
             )}
 
             <Link
-              href="/dashboard"
+              href="/pay"
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl text-base font-medium bg-navy-900/90 hover:bg-navy-850 text-slate-200 border border-navy-800 transition-colors"
             >
-              <span>Explore Live App</span>
+              <Send className="h-4 w-4 text-brand-400" />
+              <span>Send Payment / Intent</span>
+            </Link>
+
+            <Link
+              href="/treasury"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl text-base font-medium bg-navy-900/90 hover:bg-navy-850 text-slate-200 border border-navy-800 transition-colors"
+            >
+              <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              <span>Treasury Guardrails</span>
+            </Link>
+          </div>
+
+          {/* Quick Intent Tryouts */}
+          <div className="mt-6 flex flex-wrap justify-center items-center gap-2 text-xs">
+            <span className="text-slate-400 text-[11px] font-semibold">Try Intent:</span>
+            <Link
+              href="/pay?recipient=john-kennedy.testnet&amount=50"
+              className="px-3 py-1 rounded-lg bg-navy-900/80 hover:bg-navy-800 border border-navy-800 text-slate-300 hover:text-white transition-all flex items-center gap-1.5"
+            >
+              <span className="text-brand-400 font-mono">⚡</span>
+              <span>"Send $50 to John Kennedy on Base"</span>
+            </Link>
+            <Link
+              href="/pay?recipient=acme-design.testnet&amount=75"
+              className="px-3 py-1 rounded-lg bg-navy-900/80 hover:bg-navy-800 border border-navy-800 text-slate-300 hover:text-white transition-all flex items-center gap-1.5"
+            >
+              <span className="text-brand-400 font-mono">⚡</span>
+              <span>"Pay Acme Design 75 NEAR"</span>
             </Link>
           </div>
 
@@ -65,11 +101,15 @@ export function Hero() {
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              <span>AI Multimodal Extraction &amp; OCR</span>
+              <span>AI Multimodal Invoicing &amp; OCR</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              <span>NEAR Intents &amp; Sub-Second Settlement</span>
+              <span>Autonomous Treasury Guardrails (/treasury)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <span>NEAR Chain Signatures (MPC) Multi-Chain</span>
             </div>
           </div>
         </div>

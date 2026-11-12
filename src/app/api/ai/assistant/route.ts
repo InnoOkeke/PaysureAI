@@ -13,16 +13,23 @@ export async function POST(req: NextRequest) {
     // Check if the user is expressing a conversational payment intent
     const lower = message.toLowerCase().trim();
     const isPaymentIntent = 
-      lower.startsWith("send ") || 
-      lower.startsWith("pay ") || 
-      lower.startsWith("transfer ") ||
+      /^(send|pay|transfer|disburse|bridge)\b/i.test(lower) ||
+      /\b(send|pay|transfer|disburse)\s+(\$?\d+|\d+\s*(near|usdc|eth|btc|stx|sol|xrp|atom|xlm)?)/i.test(lower) ||
+      /\b(on\s+(base|ethereum|eth|arbitrum|solana|stacks|bitcoin|btc|ripple|xrp|cosmos|stellar|near))\b/i.test(lower) ||
       lower.includes("send $") ||
       lower.includes("pay $") ||
+      lower.includes("transfer $") ||
       lower.includes("pay acme") ||
+      lower.includes("pay leprof") ||
+      lower.includes("pay satoshi") ||
       lower.includes("on base") ||
-      lower.includes("on eth") ||
-      lower.includes("on arbitrum") ||
-      lower.includes("on solana");
+      lower.includes("on stacks") ||
+      lower.includes("on solana") ||
+      lower.includes("on bitcoin") ||
+      lower.includes("on xrp") ||
+      lower.includes("on cosmos") ||
+      lower.includes("on stellar") ||
+      lower.includes("on eth");
 
     if (isPaymentIntent) {
       const intent = resolveNaturalLanguageIntent(message, "company.near");
@@ -30,13 +37,14 @@ export async function POST(req: NextRequest) {
         ? "✓ Autonomous Treasury Approval: Payment is within policy threshold ($250 USD) and daily velocity limits."
         : `⚠ Security Policy Alert: ${intent.policyCheck.violations.join(", ") || "Requires Human Signoff"}`;
 
-      const reply = `**NEAR Cross-Chain Intent Resolved**:\n\n` +
+      const reply = `**NEAR Cross-Chain Intent Compiled**:\n\n` +
         `• **Target Chain**: ${intent.targetChain} (${intent.settlementExecution.settlementRail})\n` +
-        `• **Amount**: $${intent.extractedAmount.toFixed(2)} ${intent.extractedCurrency}\n` +
-        `• **Payee**: ${intent.resolvedPayee.displayName} (\`${intent.resolvedPayee.targetChainAddress}\`)\n` +
+        `• **Settlement Sum**: $${intent.extractedAmount.toFixed(2)} ${intent.extractedCurrency}\n` +
+        `• **Payee**: ${intent.resolvedPayee.displayName}\n` +
+        `• **Destination Address**: \`${intent.resolvedPayee.targetChainAddress}\`\n` +
         `• **Confirmation of Payee**: ${intent.resolvedPayee.verificationStatus} (Trust Score: ${intent.resolvedPayee.reputationScore}/100)\n` +
         `• **Treasury Guardrail**: ${policyMsg}\n\n` +
-        `You can execute this transfer directly on the **[Send Payment page](/pay)**.`;
+        `Click **Apply & Pay Now** below to authorize this payment directly from your NEAR wallet.`;
 
       return NextResponse.json({ reply, intent, provider: AI_PROVIDER_NAME });
     }
@@ -56,6 +64,8 @@ Platform Details:
 - Explorer: https://testnet.nearblocks.io
 - Wallet & Faucet: https://testnet.mynearwallet.com
 - Identity Feature: Confirmation of Payee for human-readable named accounts (*.testnet, *.near) to prevent address spoofing and typos.
+- Multi-Chain Abstraction: 8 supported destination chains including NEAR, Base, Ethereum, Arbitrum, Bitcoin (Native), Solana, Ripple (XRP), Cosmos Hub, Stacks (Bitcoin L2), and Stellar.
+- Settlement Rails: Model A (Intent-driven Solver bridge for external wallets) and Model B (NEAR decentralized Threshold MPC Chain Signatures v1.signer-prod.testnet).
 - Governance: SputnikDAO & Trezu multi-sig escalation for transactions exceeding autonomous limits ($500).
 - Agent Security: OutLayer policy rules and emergency circuit breaker.
 

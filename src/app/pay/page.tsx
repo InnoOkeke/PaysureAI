@@ -44,16 +44,18 @@ export default function PayPage() {
   const recipientParam = searchParams.get("recipient");
   const amountParam = searchParams.get("amount");
   const promptParam = searchParams.get("prompt");
+  const networkParam = searchParams.get("network");
+  const memoParam = searchParams.get("memo");
   const txHashParam = searchParams.get("transactionHashes");
 
   const { accountId, isConnected, balance, connect, sendNearPayment, sendChainSignaturePayment } = useNearWallet();
 
   // Workflow states
   const [recipient, setRecipient] = useState(recipientParam || "");
-  const [selectedChainId, setSelectedChainId] = useState<string>("near");
+  const [selectedChainId, setSelectedChainId] = useState<string>(networkParam || "near");
   const [amount, setAmount] = useState(amountParam || "");
   const [tokenSymbol, setTokenSymbol] = useState("NEAR");
-  const [invoiceReference, setInvoiceReference] = useState("");
+  const [invoiceReference, setInvoiceReference] = useState(memoParam || "");
   const [invoiceId, setInvoiceId] = useState(invoiceIdParam || "");
 
   // Verification state
@@ -144,7 +146,7 @@ export default function PayPage() {
     checkPayee(targetAddr, resolvedIntent.resolvedPayee.displayName);
   };
 
-  // Pre-fill from invoice or URL params
+  // Pre-fill from invoice, URL params, or Copilot custom intent event
   useEffect(() => {
     if (invoiceIdParam) {
       fetch(`/api/invoices`)
@@ -160,13 +162,56 @@ export default function PayPage() {
           }
         })
         .catch(console.error);
-    } else if (recipientParam) {
-      checkPayee(recipientParam);
+    } else {
+      if (recipientParam) {
+        setRecipient(recipientParam);
+        checkPayee(recipientParam);
+      }
+      if (amountParam) {
+        setAmount(amountParam);
+      }
+      if (memoParam) {
+        setInvoiceReference(memoParam);
+      }
+      if (networkParam) {
+        const match = SUPPORTED_CHAINS.find(
+          (c) =>
+            c.id === networkParam.toLowerCase() ||
+            c.name.toLowerCase().includes(networkParam.toLowerCase())
+        );
+        if (match) setSelectedChainId(match.id);
+      }
     }
     if (promptParam) {
       handleResolveIntent(promptParam);
     }
-  }, [invoiceIdParam, recipientParam, promptParam]);
+  }, [invoiceIdParam, recipientParam, amountParam, memoParam, networkParam, promptParam]);
+
+  // Listen for instant 1-click apply events from the Copilot chatbot
+  useEffect(() => {
+    const handleApplyIntentEvent = (e: any) => {
+      const detail = e.detail;
+      if (!detail) return;
+      if (detail.recipient) {
+        setRecipient(detail.recipient);
+        checkPayee(detail.recipient, detail.name);
+      }
+      if (detail.amount) setAmount(detail.amount.toString());
+      if (detail.network) {
+        const match = SUPPORTED_CHAINS.find(
+          (c) =>
+            c.id === detail.network.toLowerCase() ||
+            c.name.toLowerCase().includes(detail.network.toLowerCase())
+        );
+        if (match) setSelectedChainId(match.id);
+      }
+      if (detail.memo) setInvoiceReference(detail.memo);
+      setStep(1);
+    };
+
+    window.addEventListener("paysure:apply-intent", handleApplyIntentEvent);
+    return () => window.removeEventListener("paysure:apply-intent", handleApplyIntentEvent);
+  }, []);
 
   // Handle return callback from MyNearWallet after signing real on-chain transaction
   useEffect(() => {

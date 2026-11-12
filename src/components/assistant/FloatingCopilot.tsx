@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   Send, 
   Bot, 
@@ -12,7 +12,12 @@ import {
   MessageSquare, 
   ShieldCheck,
   ChevronDown,
-  ArrowUpRight
+  ArrowUpRight,
+  Globe,
+  Wallet,
+  ArrowRight,
+  CheckCircle2,
+  AlertTriangle
 } from "lucide-react";
 import { PaySureLogo } from "@/components/brand/Logos";
 import { useNearWallet } from "@/context/NearWalletContext";
@@ -20,10 +25,12 @@ import { useNearWallet } from "@/context/NearWalletContext";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  intent?: any;
 }
 
 export function FloatingCopilot() {
   const pathname = usePathname();
+  const router = useRouter();
   const { isConnected } = useNearWallet();
   const [isOpen, setIsOpen] = useState(false);
   const [hasDismissedTeaser, setHasDismissedTeaser] = useState(false);
@@ -33,7 +40,7 @@ export function FloatingCopilot() {
     {
       role: "assistant",
       content:
-        "Hello! I am your PaySure Autonomous AI Agent. Ask me to verify counterparties, summarize pending invoices, or explain Confirmation of Payee on NEAR Protocol.",
+        "Hello! I am your PaySure Autonomous AI Agent. Ask me to verify counterparties, summarize pending invoices, or execute cross-chain intents across Stacks, Solana, Bitcoin, Base, and NEAR Protocol.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -44,8 +51,8 @@ export function FloatingCopilot() {
   const getRouteTeaser = () => {
     if (pathname.includes("/pay")) {
       return {
-        title: "Payment Safety Guard",
-        prompt: "Need me to verify this counterparty's NEAR account ID before sending funds?",
+        title: "Multi-Chain Safety Guard",
+        prompt: "Need me to verify a counterparty across Stacks, Bitcoin, EVM, or NEAR before transferring?",
       };
     }
     if (pathname.includes("/invoices/upload")) {
@@ -63,12 +70,12 @@ export function FloatingCopilot() {
     if (pathname.includes("/recipients")) {
       return {
         title: "Directory Intelligence",
-        prompt: "Ask me to explain any payee verification status or safety flags.",
+        prompt: "Ask me to explain any payee verification status, multichain address, or safety flags.",
       };
     }
     return {
       title: "PaySure AI Copilot",
-      prompt: "Have questions about payments, test tokens, or counterparties? Ask me!",
+      prompt: "Send cross-chain transfers or ask questions about counterparties & guardrails!",
     };
   };
 
@@ -96,11 +103,12 @@ export function FloatingCopilot() {
   }, [messages, isOpen]);
 
   const samplePrompts = [
-    "Send $50 to John Kennedy on Base",
-    "Pay Acme Design 75 NEAR",
+    "Send $50 to LeProf on Stacks",
+    "Pay LeProf 20 NEAR on Solana",
+    "Send $100 to Satoshi on Bitcoin",
+    "Transfer $50 to Acme on Base",
     "Show my pending invoices",
     "How does Confirmation of Payee work on NEAR?",
-    "Is acme-design.testnet verified?",
   ];
 
   const handleSend = async (textToSend?: string) => {
@@ -121,7 +129,14 @@ export function FloatingCopilot() {
 
       const data = await res.json();
       if (res.ok && data.reply) {
-        setMessages([...newMessages, { role: "assistant", content: data.reply }]);
+        setMessages([
+          ...newMessages,
+          {
+            role: "assistant",
+            content: data.reply,
+            intent: data.intent,
+          },
+        ]);
       } else {
         setMessages([
           ...newMessages,
@@ -146,16 +161,54 @@ export function FloatingCopilot() {
     }
   };
 
+  const handleApplyAndPay = (intent: any) => {
+    if (!intent) return;
+    const targetAddr =
+      intent.targetChain !== "NEAR Protocol" && intent.resolvedPayee?.targetChainAddress
+        ? intent.resolvedPayee.targetChainAddress
+        : intent.resolvedPayee?.accountId || "leprof.testnet";
+
+    let chainParam = "near";
+    const tc = (intent.targetChain || "").toLowerCase();
+    if (tc.includes("base")) chainParam = "base";
+    else if (tc.includes("eth")) chainParam = "ethereum";
+    else if (tc.includes("arbitrum")) chainParam = "arbitrum";
+    else if (tc.includes("bitcoin") || tc.includes("btc")) chainParam = "bitcoin";
+    else if (tc.includes("solana")) chainParam = "solana";
+    else if (tc.includes("xrp") || tc.includes("ripple")) chainParam = "xrp";
+    else if (tc.includes("cosmos")) chainParam = "cosmos";
+    else if (tc.includes("stacks")) chainParam = "stacks";
+    else if (tc.includes("stellar")) chainParam = "stellar";
+
+    if (pathname === "/pay") {
+      window.dispatchEvent(
+        new CustomEvent("paysure:apply-intent", {
+          detail: {
+            recipient: targetAddr,
+            amount: intent.extractedAmount,
+            network: chainParam,
+            memo: intent.memo,
+            name: intent.resolvedPayee?.displayName,
+          },
+        })
+      );
+    } else {
+      const payUrl = `/pay?recipient=${encodeURIComponent(targetAddr)}&amount=${encodeURIComponent(
+        intent.extractedAmount
+      )}&network=${encodeURIComponent(chainParam)}&memo=${encodeURIComponent(
+        intent.memo || ""
+      )}&prompt=${encodeURIComponent(intent.rawPrompt || "")}`;
+      router.push(payUrl);
+    }
+
+    setIsOpen(false);
+  };
+
   const openWithPrompt = (promptText: string) => {
     setIsOpen(true);
     setShowTeaser(false);
     handleSend(promptText);
   };
-
-  // Only show the AI assistant inside the app AFTER the user has connected their wallet
-  if (!isConnected || pathname === "/") {
-    return null;
-  }
 
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">
@@ -263,13 +316,68 @@ export function FloatingCopilot() {
                 </div>
 
                 <div
-                  className={`p-3 rounded-2xl max-w-[82%] leading-relaxed ${
+                  className={`p-3 rounded-2xl max-w-[85%] leading-relaxed ${
                     m.role === "user"
                       ? "bg-brand-600 text-white rounded-tr-none shadow-sm"
-                      : "bg-navy-950/90 text-slate-200 border border-navy-800 rounded-tl-none shadow-sm"
+                      : "bg-navy-950/90 text-slate-200 border border-navy-800 rounded-tl-none shadow-sm space-y-3"
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{m.content}</p>
+
+                  {m.intent && (
+                    <div className="mt-2.5 p-3 rounded-xl bg-black/50 border border-brand-500/30 text-[11px] space-y-2.5">
+                      <div className="flex items-center justify-between border-b border-white/[0.08] pb-1.5">
+                        <div className="flex items-center gap-1.5 font-semibold text-white">
+                          <Globe className="h-3.5 w-3.5 text-brand-400" />
+                          <span>{m.intent.targetChain}</span>
+                        </div>
+                        <span className="font-mono text-[10px] text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">
+                          {m.intent.settlementExecution?.settlementRail || "Model A Solver"}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1 font-mono text-[10.5px]">
+                        <div className="flex justify-between text-slate-400">
+                          <span>Payee:</span>
+                          <span className="text-white font-sans font-medium">{m.intent.resolvedPayee.displayName}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-400">
+                          <span>Target Address:</span>
+                          <span className="text-slate-300 truncate max-w-[140px]">
+                            {m.intent.resolvedPayee.targetChainAddress}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-slate-400">
+                          <span>Settlement Sum:</span>
+                          <span className="text-emerald-400 font-bold font-sans">
+                            ${m.intent.extractedAmount.toFixed(2)} {m.intent.extractedCurrency}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-slate-400">
+                          <span>CoP Status:</span>
+                          <span className={m.intent.resolvedPayee.verificationStatus === "VERIFIED" ? "text-emerald-400" : "text-amber-400"}>
+                            {m.intent.resolvedPayee.verificationStatus} ({m.intent.resolvedPayee.reputationScore}/100)
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-slate-400">
+                          <span>Guardrail:</span>
+                          <span className={m.intent.policyCheck?.autoExecutable ? "text-emerald-400" : "text-amber-400"}>
+                            {m.intent.policyCheck?.autoExecutable ? "✓ Policy Approved" : "⚠ Sign-off Required"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleApplyAndPay(m.intent)}
+                        className="w-full mt-2 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-md shadow-emerald-600/20 transition-all active:scale-[0.98]"
+                      >
+                        <Wallet className="h-3.5 w-3.5" />
+                        <span>Apply &amp; Pay Now</span>
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

@@ -63,6 +63,16 @@ export function createPaymentIntent(params: {
 }
 
 /**
+ * Validates if a string is a standard 20-byte EVM / Ethereum address
+ */
+export function isEVMAddress(address: string): boolean {
+  if (!address || typeof address !== "string") return false;
+  return /^0x[a-fA-F0-9]{40}$/.test(address.trim());
+}
+
+export const MPC_SIGNER_CONTRACT_ID = "v1.signer-prod.testnet";
+
+/**
  * Derives an EVM address deterministically from a NEAR account ID and derivation path
  * using NEAR MPC Chain Signatures specification (v1.signer-prod.testnet).
  */

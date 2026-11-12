@@ -22,7 +22,21 @@ import confetti from "canvas-confetti";
 import jsPDF from "jspdf";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { NEAR_CONFIG, isValidNearAccountId } from "@/lib/near/config";
+import { isEVMAddress, deriveEVMAddressFromNear } from "@/lib/near/chainSignatures";
+import { detectChainFromAddress } from "@/lib/recipients";
 import { formatCurrency } from "@/lib/utils";
+
+const SUPPORTED_CHAINS = [
+  { id: "near", name: "NEAR Protocol", rail: "NEAR Native", badge: "NEAR", color: "text-emerald-400" },
+  { id: "base", name: "Base", rail: "Model A / Solver", badge: "BASE", color: "text-blue-400" },
+  { id: "ethereum", name: "Ethereum", rail: "NEAR Chain Signatures", badge: "ETH", color: "text-indigo-400" },
+  { id: "bitcoin", name: "Bitcoin", rail: "NEAR Chain Signatures", badge: "BTC", color: "text-amber-400" },
+  { id: "solana", name: "Solana", rail: "Model A / Solver", badge: "SOL", color: "text-purple-400" },
+  { id: "xrp", name: "Ripple (XRP)", rail: "Model A / Solver", badge: "XRP", color: "text-blue-300" },
+  { id: "cosmos", name: "Cosmos", rail: "Model A / Solver", badge: "ATOM", color: "text-teal-400" },
+  { id: "stacks", name: "Stacks (L2)", rail: "Model A / Solver", badge: "STX", color: "text-orange-400" },
+  { id: "stellar", name: "Stellar", rail: "Model A / Solver", badge: "XLM", color: "text-emerald-300" },
+];
 
 export default function PayPage() {
   const searchParams = useSearchParams();
@@ -30,16 +44,25 @@ export default function PayPage() {
   const recipientParam = searchParams.get("recipient");
   const amountParam = searchParams.get("amount");
   const promptParam = searchParams.get("prompt");
+  const networkParam = searchParams.get("network");
+  const memoParam = searchParams.get("memo");
   const txHashParam = searchParams.get("transactionHashes");
 
-  const { accountId, isConnected, balance, connect, sendNearPayment } = useNearWallet();
+  const { accountId, isConnected, balance, connect, sendNearPayment, sendChainSignaturePayment } = useNearWallet();
 
   // Workflow states
   const [recipient, setRecipient] = useState(recipientParam || "");
+  const [selectedChainId, setSelectedChainId] = useState<string>(networkParam || "near");
   const [amount, setAmount] = useState(amountParam || "");
   const [tokenSymbol, setTokenSymbol] = useState("NEAR");
-  const [invoiceReference, setInvoiceReference] = useState("");
+  const [invoiceReference, setInvoiceReference] = useState(memoParam || "");
   const [invoiceId, setInvoiceId] = useState(invoiceIdParam || "");
+
+  // Dynamic balance validation
+  const numericAmount = parseFloat(amount || "0");
+  const numericBalance = isConnected && balance ? parseFloat(balance) : null;
+  const isInsufficientBalance = numericBalance !== null && !isNaN(numericAmount) && numericAmount > numericBalance;
+  const isAmountValid = !isNaN(numericAmount) && numericAmount > 0 && !isInsufficientBalance;
 
   // Verification state
   const [verification, setVerification] = useState<any>(null);
@@ -65,11 +88,27 @@ export default function PayPage() {
     (resolvedIntent?.policyCheck ? !resolvedIntent.policyCheck.isAllowed : false);
 
   const sampleIntents = [
-    "Send $50 to John Kennedy on Base",
-    "Pay Acme Design 75 NEAR",
-    "Send $120 to Satoshi Dev on Arbitrum",
-    "Transfer $3,500 to Marketing Vendor on Ethereum",
+    "Pay LeProf 20 NEAR on Solana",
+    "Send $50 to Acme Design on Base",
+    "Transfer $120 to Satoshi on Stacks L2",
+    "Pay LeProf 15 NEAR on Ripple (XRP)",
+    "Send $200 to Acme on Bitcoin",
   ];
+
+  const handleSelectChain = (chainId: string) => {
+    setSelectedChainId(chainId);
+    if (verification?.recipient) {
+      const r = verification.recipient;
+      if (chainId === "near" && r.walletAddress) setRecipient(r.walletAddress);
+      else if ((chainId === "base" || chainId === "ethereum") && r.evmAddress) setRecipient(r.evmAddress);
+      else if (chainId === "bitcoin" && r.bitcoinAddress) setRecipient(r.bitcoinAddress);
+      else if (chainId === "solana" && r.solanaAddress) setRecipient(r.solanaAddress);
+      else if (chainId === "xrp" && r.xrpAddress) setRecipient(r.xrpAddress);
+      else if (chainId === "cosmos" && r.cosmosAddress) setRecipient(r.cosmosAddress);
+      else if (chainId === "stacks" && r.stacksAddress) setRecipient(r.stacksAddress);
+      else if (chainId === "stellar" && r.stellarAddress) setRecipient(r.stellarAddress);
+    }
+  };
 
   const handleResolveIntent = async (customPrompt?: string) => {
     const promptToUse = customPrompt || intentInput;
@@ -96,16 +135,30 @@ export default function PayPage() {
     }
   };
 
+  const isValidRecipient = (addr: string) => {
+    return !!addr && addr.trim().length > 2;
+  };
+
   const handleApplyResolvedIntent = () => {
     if (!resolvedIntent) return;
-    setRecipient(resolvedIntent.resolvedPayee.accountId);
+    const targetAddr =
+      resolvedIntent.targetChain !== "NEAR Protocol" && resolvedIntent.resolvedPayee.targetChainAddress
+        ? resolvedIntent.resolvedPayee.targetChainAddress
+        : resolvedIntent.resolvedPayee.accountId;
+    setRecipient(targetAddr);
     setAmount(resolvedIntent.extractedAmount.toString());
     setTokenSymbol(resolvedIntent.extractedCurrency === "NEAR" ? "NEAR" : "USDC");
     setInvoiceReference(resolvedIntent.memo);
-    checkPayee(resolvedIntent.resolvedPayee.accountId, resolvedIntent.resolvedPayee.displayName);
+
+    const matchChain = SUPPORTED_CHAINS.find((c) =>
+      resolvedIntent.targetChain.toLowerCase().includes(c.id)
+    );
+    if (matchChain) setSelectedChainId(matchChain.id);
+
+    checkPayee(targetAddr, resolvedIntent.resolvedPayee.displayName);
   };
 
-  // Pre-fill from invoice or URL params
+  // Pre-fill from invoice, URL params, or Copilot custom intent event
   useEffect(() => {
     if (invoiceIdParam) {
       fetch(`/api/invoices`)
@@ -121,13 +174,56 @@ export default function PayPage() {
           }
         })
         .catch(console.error);
-    } else if (recipientParam) {
-      checkPayee(recipientParam);
+    } else {
+      if (recipientParam) {
+        setRecipient(recipientParam);
+        checkPayee(recipientParam);
+      }
+      if (amountParam) {
+        setAmount(amountParam);
+      }
+      if (memoParam) {
+        setInvoiceReference(memoParam);
+      }
+      if (networkParam) {
+        const match = SUPPORTED_CHAINS.find(
+          (c) =>
+            c.id === networkParam.toLowerCase() ||
+            c.name.toLowerCase().includes(networkParam.toLowerCase())
+        );
+        if (match) setSelectedChainId(match.id);
+      }
     }
     if (promptParam) {
       handleResolveIntent(promptParam);
     }
-  }, [invoiceIdParam, recipientParam, promptParam]);
+  }, [invoiceIdParam, recipientParam, amountParam, memoParam, networkParam, promptParam]);
+
+  // Listen for instant 1-click apply events from the Copilot chatbot
+  useEffect(() => {
+    const handleApplyIntentEvent = (e: any) => {
+      const detail = e.detail;
+      if (!detail) return;
+      if (detail.recipient) {
+        setRecipient(detail.recipient);
+        checkPayee(detail.recipient, detail.name);
+      }
+      if (detail.amount) setAmount(detail.amount.toString());
+      if (detail.network) {
+        const match = SUPPORTED_CHAINS.find(
+          (c) =>
+            c.id === detail.network.toLowerCase() ||
+            c.name.toLowerCase().includes(detail.network.toLowerCase())
+        );
+        if (match) setSelectedChainId(match.id);
+      }
+      if (detail.memo) setInvoiceReference(detail.memo);
+      setStep(1);
+    };
+
+    window.addEventListener("paysure:apply-intent", handleApplyIntentEvent);
+    return () => window.removeEventListener("paysure:apply-intent", handleApplyIntentEvent);
+  }, []);
 
   useEffect(() => {
     if (!txHashParam) return;
@@ -195,6 +291,9 @@ export default function PayPage() {
       throw new Error("Connect your NEAR wallet before approving this payment.");
     }
 
+    const activeChain =
+      SUPPORTED_CHAINS.find((chain) => chain.id === selectedChainId) ?? SUPPORTED_CHAINS[0];
+
     const payload = {
       recipient,
       recipientAddress: recipient,
@@ -203,8 +302,9 @@ export default function PayPage() {
       invoiceReference: invoiceReference || null,
       invoiceId: invoiceId || null,
       verificationStatus: verification?.status ?? "UNVERIFIED",
-      targetChain: resolvedIntent?.targetChain ?? "NEAR Protocol",
-      settlementRail: resolvedIntent?.settlementExecution?.settlementRail ?? "NEAR Native",
+      targetChain: resolvedIntent?.targetChain ?? activeChain.name,
+      settlementRail:
+        resolvedIntent?.settlementExecution?.settlementRail ?? activeChain.rail,
       policyCheck: resolvedIntent?.policyCheck ?? null,
     };
 
@@ -261,14 +361,21 @@ export default function PayPage() {
   };
 
   const handlePayWithMyNearWallet = async () => {
-    if (!recipient || !isValidNearAccountId(recipient)) {
-      alert("Please enter a valid NEAR Account ID (e.g. acme-design.testnet).");
+    if (!recipient || !isValidRecipient(recipient)) {
+      alert("Please enter a valid destination recipient address or NEAR account.");
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
       alert("Please enter a valid amount.");
       return;
     }
+    if (isInsufficientBalance) {
+      alert(`Insufficient funds. Your available balance is ${balance} NEAR.`);
+      return;
+    }
+
+    const isCrossChain = selectedChainId !== "near";
+    const nearReceiverId = isCrossChain ? "v1.signer-prod.testnet" : recipient;
 
     setPendingError(null);
     try {
@@ -276,12 +383,14 @@ export default function PayPage() {
       const currentUrl = typeof window !== "undefined" ? window.location.origin + "/pay" : "";
       const redirectUrl = `${currentUrl}?recipient=${encodeURIComponent(recipient)}&amount=${encodeURIComponent(
         amount
-      )}&invoiceId=${encodeURIComponent(invoiceId || "")}&payerAccount=${encodeURIComponent(
+      )}&invoiceId=${encodeURIComponent(invoiceId || "")}&network=${encodeURIComponent(
+        selectedChainId
+      )}&memo=${encodeURIComponent(invoiceReference || "")}&payerAccount=${encodeURIComponent(
         accountId || ""
       )}&pendingActionId=${encodeURIComponent(actionId || "")}`;
 
       const walletUrl = `${NEAR_CONFIG.walletUrl}/send-money?recipient=${encodeURIComponent(
-        recipient
+        nearReceiverId
       )}&amount=${encodeURIComponent(amount)}&redirect_url=${encodeURIComponent(redirectUrl)}`;
 
       window.location.href = walletUrl;
@@ -311,12 +420,16 @@ export default function PayPage() {
 
   const handleProceedToReview = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recipient || !isValidNearAccountId(recipient)) {
-      alert("Please enter a valid NEAR Account ID (e.g., acme-design.testnet or satoshi.near).");
+    if (!recipient || !isValidRecipient(recipient)) {
+      alert("Please enter a valid recipient account or address.");
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
       alert("Please enter a valid amount.");
+      return;
+    }
+    if (isInsufficientBalance) {
+      alert(`Insufficient funds. Your available balance is ${balance} NEAR.`);
       return;
     }
     setPendingError(null);
@@ -328,8 +441,8 @@ export default function PayPage() {
       connect();
       return;
     }
-    if (!recipient || !isValidNearAccountId(recipient)) {
-      alert("Please enter a valid NEAR Account ID (e.g. alice.testnet).");
+    if (!recipient || !isValidRecipient(recipient)) {
+      alert("Please enter a valid recipient account or address.");
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
@@ -342,6 +455,10 @@ export default function PayPage() {
       );
       return;
     }
+    if (isInsufficientBalance) {
+      alert(`Insufficient funds. Your available balance is ${balance} NEAR.`);
+      return;
+    }
 
     setIsExecuting(true);
     setPendingError(null);
@@ -349,8 +466,20 @@ export default function PayPage() {
 
     try {
       actionId = await prepareAndConfirmPayment();
-      const txHash = await sendNearPayment(recipient, amount);
+      let txHash = "";
+      const isEvm = isEVMAddress(recipient);
+      const isBtc = /^(bc1|[13]|tb1)/.test(recipient);
+
+      if (isEvm || isBtc) {
+        txHash = await sendChainSignaturePayment(recipient, amount);
+      } else if (selectedChainId === "near") {
+        txHash = await sendNearPayment(recipient, amount);
+      } else {
+        txHash = await sendNearPayment("v1.signer-prod.testnet", amount);
+      }
+
       const finalHash = txHash || `NEAR-LIVE-${Date.now()}`;
+      const activeChain = SUPPORTED_CHAINS.find((c) => c.id === selectedChainId) || SUPPORTED_CHAINS[0];
 
       const res = await fetch("/api/payments", {
         method: "POST",
@@ -363,8 +492,8 @@ export default function PayPage() {
           transactionHash: finalHash,
           invoiceId: invoiceId || null,
           invoiceReference: invoiceReference || `INV-${Date.now().toString().slice(-4)}`,
-          network: "NEAR Testnet",
-          chainId: 0,
+          network: activeChain.name,
+          chainId: selectedChainId === "near" ? 0 : 1,
         }),
       });
 
@@ -634,6 +763,11 @@ export default function PayPage() {
                       <span className="font-mono font-semibold text-emerald-400 mt-1 block">
                         ${resolvedIntent.extractedAmount.toFixed(2)} {resolvedIntent.extractedCurrency}
                       </span>
+                      {numericBalance !== null && resolvedIntent.extractedAmount > numericBalance && (
+                        <span className="text-[10px] text-rose-400 font-sans font-medium block mt-0.5">
+                          Exceeds balance ({balance} NEAR)
+                        </span>
+                      )}
                     </div>
 
                     <div className="bg-white/[0.02] p-3 rounded-xl border border-white/[0.06]">
@@ -672,27 +806,90 @@ export default function PayPage() {
               <div className="border-b border-white/[0.06] pb-4">
                 <h3 className="text-base font-semibold text-white">Transfer Parameters</h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Configure recipient account, settlement amount, and optional invoice reference.
+                  Configure destination network, recipient account or cross-chain address, and settlement amount.
                 </p>
+              </div>
+
+              {/* Destination Blockchain Selector */}
+              <div className="space-y-2 pb-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-300 block">
+                    Destination Blockchain
+                  </label>
+                  <span className="text-[10px] font-mono text-brand-400">
+                    Model A Intent Bridge &amp; Chain Signatures
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
+                  {SUPPORTED_CHAINS.map((c) => {
+                    const isSelected = selectedChainId === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => handleSelectChain(c.id)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all border ${
+                          isSelected
+                            ? "bg-white text-black font-semibold border-white shadow-md"
+                            : "bg-white/[0.03] text-slate-400 border-white/[0.06] hover:text-white hover:border-white/[0.15]"
+                        }`}
+                      >
+                        <span className="font-mono text-[10px] mr-1.5 opacity-70">{c.badge}</span>
+                        <span>{c.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Recipient Account Input */}
               <div className="space-y-2">
-                <label className="text-xs font-medium text-slate-300 block">
-                  Recipient NEAR Account ID
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-slate-300 block">
+                    Recipient Address / Handle ({SUPPORTED_CHAINS.find((c) => c.id === selectedChainId)?.name || "NEAR"})
+                  </label>
+                  <span className="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Globe className="h-3 w-3" />
+                    <span>{SUPPORTED_CHAINS.find((c) => c.id === selectedChainId)?.rail || "Cross-Chain Rail"}</span>
+                  </span>
+                </div>
 
                 <div className="relative">
                   <input
                     type="text"
                     value={recipient}
                     onChange={(e) => {
-                      setRecipient(e.target.value);
-                      if (isValidNearAccountId(e.target.value)) {
-                        checkPayee(e.target.value);
+                      const val = e.target.value;
+                      setRecipient(val);
+                      if (val.trim()) {
+                        const detected = detectChainFromAddress(val);
+                        const match = SUPPORTED_CHAINS.find(
+                          (c) =>
+                            detected.chain.toLowerCase().includes(c.id) ||
+                            c.name.toLowerCase() === detected.chain.toLowerCase()
+                        );
+                        if (match) setSelectedChainId(match.id);
+                        checkPayee(val);
                       }
                     }}
-                    placeholder="e.g. acme-design.testnet or satoshi.near"
+                    placeholder={
+                      selectedChainId === "near"
+                        ? "e.g. acme-design.testnet or satoshi.near"
+                        : selectedChainId === "base" || selectedChainId === "ethereum"
+                        ? "e.g. 0x71C8360f... on Base/Ethereum"
+                        : selectedChainId === "bitcoin"
+                        ? "e.g. bc1qw508d... on Bitcoin"
+                        : selectedChainId === "solana"
+                        ? "e.g. 7xKXtg2CW... on Solana"
+                        : selectedChainId === "xrp"
+                        ? "e.g. r9cZA1mL... on Ripple (XRP)"
+                        : selectedChainId === "cosmos"
+                        ? "e.g. cosmos1hsk... on Cosmos Hub"
+                        : selectedChainId === "stacks"
+                        ? "e.g. SP1P72Z... on Stacks (L2)"
+                        : "e.g. GDQP2KP... on Stellar"
+                    }
                     className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
                     required
                   />
@@ -703,6 +900,59 @@ export default function PayPage() {
                     </div>
                   )}
                 </div>
+
+                {selectedChainId !== "near" && (
+                  <div className="p-3 rounded-xl bg-cyan-500/[0.04] border border-cyan-500/20 text-xs space-y-1">
+                    <div className="flex items-center justify-between text-[11px] text-cyan-300 font-medium">
+                      <span>Cross-Chain Settlement Rail</span>
+                      <span>Target: {SUPPORTED_CHAINS.find((c) => c.id === selectedChainId)?.name}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed font-mono">
+                      Routing via{" "}
+                      <span className="text-white font-semibold">
+                        {SUPPORTED_CHAINS.find((c) => c.id === selectedChainId)?.rail}
+                      </span>{" "}
+                      from your NEAR treasury account.
+                    </p>
+                  </div>
+                )}
+
+                {/* Inline Confirmation of Payee Status Indicator */}
+                {verification && (
+                  <div
+                    className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 text-xs transition-all ${
+                      verification.status === "VERIFIED"
+                        ? "bg-emerald-950/30 border-emerald-500/30 text-emerald-300"
+                        : verification.status === "WARNING"
+                        ? "bg-amber-950/30 border-amber-500/30 text-amber-300"
+                        : "bg-rose-950/30 border-rose-500/30 text-rose-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      {verification.status === "VERIFIED" ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+                      )}
+                      <div>
+                        <span className="font-semibold text-white">
+                          {verification.recipient?.displayName ||
+                            (verification.status === "VERIFIED"
+                              ? "Identity Matched"
+                              : "Unregistered Recipient")}
+                        </span>
+                        {verification.recipient?.paymentId && (
+                          <span className="text-[10px] text-slate-400 ml-1.5 font-mono">
+                            ({verification.recipient.paymentId})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-black/40 border border-white/[0.08] uppercase">
+                      {verification.status}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Amount & Asset */}
@@ -714,7 +964,14 @@ export default function PayPage() {
                     </label>
                     {isConnected && (
                       <span className="text-[11px] text-slate-400">
-                        Available: <strong className="text-brand-300 font-mono">{balance} NEAR</strong>
+                        Available:{" "}
+                        <strong
+                          className={`font-mono ${
+                            isInsufficientBalance ? "text-rose-400 font-bold" : "text-brand-300"
+                          }`}
+                        >
+                          {balance} NEAR
+                        </strong>
                       </span>
                     )}
                   </div>
@@ -725,9 +982,22 @@ export default function PayPage() {
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="0.00"
-                    className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                    className={`w-full bg-white/[0.02] border rounded-xl px-4 py-3 text-sm text-white font-mono placeholder-slate-500 focus:outline-none transition-colors ${
+                      isInsufficientBalance
+                        ? "border-rose-500/70 focus:border-rose-500 bg-rose-950/20 text-rose-200"
+                        : "border-white/[0.08] focus:border-brand-500 text-white"
+                    }`}
                     required
                   />
+                  {isInsufficientBalance && (
+                    <div className="flex items-center gap-1.5 text-rose-400 text-xs mt-1 font-medium animate-in fade-in">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        Insufficient balance: You have <strong>{balance} NEAR</strong>, but you entered{" "}
+                        <strong>{amount} NEAR</strong>.
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -760,22 +1030,57 @@ export default function PayPage() {
               </div>
 
               {/* Submit Action */}
-              <div className="pt-4 border-t border-white/[0.06] flex justify-end">
+              <div className="pt-4 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs">
+                  {isInsufficientBalance && (
+                    <span className="text-rose-400 font-medium flex items-center gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      <span>Amount exceeds available wallet balance</span>
+                    </span>
+                  )}
+                </div>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/25 transition-all active:scale-[0.98]"
+                  disabled={!isAmountValid || !recipient}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-brand-600 hover:bg-brand-500 disabled:bg-white/[0.04] disabled:text-slate-500 disabled:border disabled:border-white/[0.08] disabled:cursor-not-allowed text-white text-xs font-semibold shadow-lg shadow-brand-600/25 transition-all active:scale-[0.98]"
                 >
-                  <span>Review &amp; Verify Recipient</span>
+                  <span>
+                    {isInsufficientBalance
+                      ? "Insufficient Balance"
+                      : "Review & Verify Recipient"}
+                  </span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
             </form>
           </div>
 
-          {/* Right Column (5 Cols): Live Confirmation of Payee & Security Inspector */}
-          <div className="lg:col-span-5 space-y-6">
+          {/* Right Column (5 Cols): Live Confirmation of Payee & Security Inspector (Sticky) */}
+          <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24 h-fit">
             
-            {/* Live Payee Verification Panel */}
+            {/* Active Treasury Guardrails Summary */}
+            <div className="rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 space-y-3.5 text-xs shadow-xl">
+              <div className="flex items-center gap-2 text-slate-300 font-semibold">
+                <Lock className="h-3.5 w-3.5 text-brand-400" />
+                <span>Active Settlement Safeguards</span>
+              </div>
+              <div className="space-y-2 font-mono text-[11px]">
+                <div className="flex justify-between py-1.5 border-b border-white/[0.05] text-slate-400">
+                  <span>Single-Tx Policy Limit</span>
+                  <span className="text-white">200.00 NEAR ($500)</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-white/[0.05] text-slate-400">
+                  <span>Consensus Finality</span>
+                  <span className="text-emerald-400">~1.1s (Nightshade 2.0)</span>
+                </div>
+                <div className="flex justify-between py-1.5 text-slate-400">
+                  <span>Custody Model</span>
+                  <span className="text-slate-200">Non-Custodial Wallet Sign</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Payee Verification Panel (Confirmation of Payee) */}
             <div className="rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 sm:p-7 space-y-5 shadow-xl">
               <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
                 <div className="flex items-center gap-2.5">
@@ -838,7 +1143,7 @@ export default function PayPage() {
               ) : (
                 <div className="space-y-4">
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Enter a recipient NEAR account on the left to automatically query the on-chain registry and screen for lookalike homoglyphs.
+                    Enter a recipient account or cross-chain address on the left to automatically query the on-chain registry and screen for lookalike homoglyphs.
                   </p>
                   <div className="space-y-2.5 text-xs">
                     {[
@@ -855,28 +1160,6 @@ export default function PayPage() {
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Active Treasury Guardrails Summary */}
-            <div className="rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 space-y-3.5 text-xs">
-              <div className="flex items-center gap-2 text-slate-300 font-semibold">
-                <Lock className="h-3.5 w-3.5 text-brand-400" />
-                <span>Active Settlement Safeguards</span>
-              </div>
-              <div className="space-y-2 font-mono text-[11px]">
-                <div className="flex justify-between py-1.5 border-b border-white/[0.05] text-slate-400">
-                  <span>Single-Tx Policy Limit</span>
-                  <span className="text-white">200.00 NEAR ($500)</span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-white/[0.05] text-slate-400">
-                  <span>Consensus Finality</span>
-                  <span className="text-emerald-400">~1.1s (Nightshade 2.0)</span>
-                </div>
-                <div className="flex justify-between py-1.5 text-slate-400">
-                  <span>Custody Model</span>
-                  <span className="text-slate-200">Non-Custodial Wallet Sign</span>
-                </div>
-              </div>
             </div>
 
           </div>
@@ -909,6 +1192,18 @@ export default function PayPage() {
             <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-500/40 flex items-start gap-3 text-rose-300 text-xs">
               <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0" />
               <p className="leading-relaxed">{pendingError}</p>
+            </div>
+          )}
+
+          {isInsufficientBalance && (
+            <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-500/40 flex items-start gap-3 text-rose-300 text-xs">
+              <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Insufficient Account Balance</p>
+                <p className="mt-1 text-slate-300">
+                  Your connected wallet has <strong className="text-white">{balance} NEAR</strong>, but this payment requires <strong className="text-rose-300">{amount} NEAR</strong>. Please go back to reduce the transfer amount or top up your testnet wallet.
+                </p>
+              </div>
             </div>
           )}
 
@@ -956,15 +1251,22 @@ export default function PayPage() {
             <div className="flex justify-between items-center py-1.5 border-b border-white/[0.06]">
               <span className="text-slate-400">Settlement Network</span>
               <span className="font-semibold text-slate-200">
-                {resolvedIntent ? `${resolvedIntent.targetChain} (${resolvedIntent.settlementExecution.settlementRail})` : "NEAR Protocol"}
+                {SUPPORTED_CHAINS.find((c) => c.id === selectedChainId)?.name || "NEAR Protocol"}
               </span>
             </div>
 
-            {resolvedIntent?.settlementExecution?.mpcSignerDerivation && (
+            <div className="flex justify-between items-center py-1.5 border-b border-white/[0.06]">
+              <span className="text-slate-400">Execution Rail</span>
+              <span className="font-semibold text-cyan-400">
+                {SUPPORTED_CHAINS.find((c) => c.id === selectedChainId)?.rail || "Native Settlement"}
+              </span>
+            </div>
+
+            {(isEVMAddress(recipient) || selectedChainId === "ethereum" || selectedChainId === "base" || selectedChainId === "arbitrum") && (
               <div className="flex justify-between items-center py-1.5 border-b border-white/[0.06]">
-                <span className="text-slate-400">NEAR MPC Derived Address</span>
+                <span className="text-slate-400">NEAR MPC EVM Signer</span>
                 <span className="font-mono text-[11px] text-brand-300 truncate max-w-[260px]">
-                  {resolvedIntent.settlementExecution.mpcSignerDerivation}
+                  {deriveEVMAddressFromNear(accountId || "company.testnet")}
                 </span>
               </div>
             )}
@@ -997,8 +1299,8 @@ export default function PayPage() {
                 <button
                   type="button"
                   onClick={handleExecutePayment}
-                  disabled={isExecuting || paymentBlocked}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-emerald-600/25 transition-all"
+                  disabled={isExecuting || paymentBlocked || isInsufficientBalance}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-white/[0.04] disabled:text-slate-500 disabled:border disabled:border-white/[0.08] disabled:cursor-not-allowed text-white text-xs font-semibold shadow-lg shadow-emerald-600/25 transition-all"
                 >
                   {isExecuting ? (
                     <>
@@ -1009,6 +1311,11 @@ export default function PayPage() {
                     <>
                       <Lock className="h-4 w-4" />
                       <span>Blocked by Treasury Policy</span>
+                    </>
+                  ) : isInsufficientBalance ? (
+                    <>
+                      <AlertTriangle className="h-4 w-4 text-amber-400" />
+                      <span>Insufficient Balance ({balance} NEAR Available)</span>
                     </>
                   ) : (
                     <>
@@ -1021,7 +1328,8 @@ export default function PayPage() {
                 <button
                   type="button"
                   onClick={handlePayWithMyNearWallet}
-                  className="inline-flex items-center gap-1.5 px-4 py-3 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.08] text-xs font-medium transition-all"
+                  disabled={isInsufficientBalance}
+                  className="inline-flex items-center gap-1.5 px-4 py-3 rounded-full bg-white/[0.04] hover:bg-white/[0.08] disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 border border-white/[0.08] text-xs font-medium transition-all"
                   title="Or transfer directly via MyNearWallet web"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -1069,12 +1377,26 @@ export default function PayPage() {
             </div>
 
             <div className="flex justify-between items-center py-1">
-              <span className="text-slate-400">Recipient Account</span>
+              <span className="text-slate-400">Recipient Account / Address</span>
               <span className="font-mono text-slate-200">{receiptData.recipientAddress}</span>
             </div>
 
             <div className="flex justify-between items-center py-1">
-              <span className="text-slate-400">NEAR Transaction Hash</span>
+              <span className="text-slate-400">Destination Network</span>
+              <span className="font-semibold text-brand-300">
+                {receiptData.network || (SUPPORTED_CHAINS.find((c) => c.id === selectedChainId)?.name ?? "NEAR Protocol")}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center py-1">
+              <span className="text-slate-400">Settlement Rail</span>
+              <span className="font-mono text-cyan-400 text-xs">
+                {SUPPORTED_CHAINS.find((c) => c.id === selectedChainId)?.rail || "NEAR Nightshade Consensus"}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center py-1">
+              <span className="text-slate-400">NEAR Settlement Hash</span>
               <a
                 href={`${NEAR_CONFIG.explorerUrl}/txns/${receiptData.transactionHash}`}
                 target="_blank"
@@ -1111,6 +1433,70 @@ export default function PayPage() {
             >
               Make Another Payment
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Awaiting Wallet Confirmation In-Flight Modal */}
+      {isExecuting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="max-w-md w-full rounded-3xl bg-[#090B10] border border-white/[0.12] p-6 sm:p-8 space-y-6 text-center shadow-2xl">
+            <div className="relative mx-auto w-16 h-16 rounded-2xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 text-brand-400 animate-spin" />
+              <Wallet className="h-5 w-5 text-white absolute" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                {selectedChainId === "near"
+                  ? "Confirm in Connected Wallet"
+                  : `Authorize Multi-Chain Transfer (${SUPPORTED_CHAINS.find((c) => c.id === selectedChainId)?.name || "Cross-Chain"})`}
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
+                {selectedChainId === "near"
+                  ? "Please approve the transaction in your connected NEAR wallet popup (MyNearWallet / Meteor) to finalize settlement."
+                  : `Please approve the transaction in your connected NEAR wallet popup to lock funds and dispatch cross-chain settlement to ${SUPPORTED_CHAINS.find((c) => c.id === selectedChainId)?.name}.`}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-xs space-y-2.5 font-mono text-left">
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Beneficiary:</span>
+                <span className="text-white truncate max-w-[200px] font-medium">{recipient}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Target Chain:</span>
+                <span className="text-brand-300 font-sans font-semibold">
+                  {SUPPORTED_CHAINS.find((c) => c.id === selectedChainId)?.name || "NEAR Protocol"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Settlement Rail:</span>
+                <span className="text-cyan-400 font-sans font-semibold">
+                  {SUPPORTED_CHAINS.find((c) => c.id === selectedChainId)?.rail || "NEAR Protocol (Native)"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Signer / Solver:</span>
+                <span className="text-slate-300">
+                  {selectedChainId !== "near" ? "v1.signer-prod.testnet" : (accountId || "Connected Wallet")}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400 pt-1 border-t border-white/[0.04]">
+                <span>Total Amount:</span>
+                <span className="text-emerald-400 font-bold text-sm">{amount} {tokenSymbol}</span>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setIsExecuting(false)}
+                className="w-full py-2.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-xs font-medium text-slate-400 hover:text-white transition-colors"
+              >
+                Cancel or Dismiss
+              </button>
+            </div>
           </div>
         </div>
       )}

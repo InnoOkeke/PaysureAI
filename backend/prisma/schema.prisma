@@ -131,3 +131,18 @@ model AuditLog {
   @@index([action])
 }
 
+model TreasuryPolicy {
+  id                           String   @id @default(cuid())
+  accountId                    String   @unique
+  maxSingleTxAmountUSD         Float    @default(500)
+  dailyVelocityCapUSD          Float    @default(2500)
+  autoApproveVerifiedUnderUSD  Float    @default(100)
+  emergencyKillswitchActive    Boolean  @default(false)
+  sputnikDaoContract           String   @default("paysure-council.sputnik-dao.testnet")
+  departmentBudgets            Json     @default("[]")
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  @@index([accountId])
+}
+

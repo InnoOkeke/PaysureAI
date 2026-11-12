@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listAllRecipients, addCounterparty } from "@/lib/recipients";
-import { isValidNearAccountId } from "@/lib/near/config";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +15,24 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    let { displayName, paymentId, walletAddress, evmAddress, notes, verificationStatus } = body;
+    let {
+      displayName,
+      paymentId,
+      walletAddress,
+      evmAddress,
+      bitcoinAddress,
+      solanaAddress,
+      xrpAddress,
+      cosmosAddress,
+      stacksAddress,
+      stellarAddress,
+      notes,
+      verificationStatus,
+    } = body;
 
     if (!displayName || !walletAddress) {
       return NextResponse.json(
-        { error: "Display name and wallet address are required." },
+        { error: "Display name and primary NEAR account ID are required." },
         { status: 400 }
       );
     }
@@ -48,7 +60,13 @@ export async function POST(req: NextRequest) {
       displayName,
       paymentId,
       walletAddress: cleanWallet,
-      evmAddress: cleanEvm,
+      evmAddress: cleanEvm || undefined,
+      bitcoinAddress: bitcoinAddress?.trim() || undefined,
+      solanaAddress: solanaAddress?.trim() || undefined,
+      xrpAddress: xrpAddress?.trim() || undefined,
+      cosmosAddress: cosmosAddress?.trim() || undefined,
+      stacksAddress: stacksAddress?.trim() || undefined,
+      stellarAddress: stellarAddress?.trim() || undefined,
       notes,
       verificationStatus: verificationStatus || "VERIFIED",
     });
@@ -58,4 +76,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

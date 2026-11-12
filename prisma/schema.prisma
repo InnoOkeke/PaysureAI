@@ -24,6 +24,12 @@ model Recipient {
   displayName        String
   walletAddress      String
   evmAddress         String?
+  bitcoinAddress     String?
+  solanaAddress      String?
+  xrpAddress         String?
+  cosmosAddress      String?
+  stacksAddress      String?
+  stellarAddress     String?
   paymentId          String    @unique
   verificationStatus String    @default("UNVERIFIED") // VERIFIED, WARNING, UNVERIFIED, MISMATCH
   notes              String?
@@ -33,6 +39,9 @@ model Recipient {
 
   @@index([walletAddress])
   @@index([evmAddress])
+  @@index([bitcoinAddress])
+  @@index([solanaAddress])
+  @@index([xrpAddress])
   @@index([paymentId])
 }
 

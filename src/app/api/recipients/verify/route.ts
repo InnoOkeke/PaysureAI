@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findCounterparty } from "@/lib/recipients";
+import { findCounterparty, detectChainFromAddress } from "@/lib/recipients";
 import { isValidNearAccountId } from "@/lib/near/config";
 
 export const dynamic = "force-dynamic";
@@ -19,35 +19,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let cleanAddress = address.trim().toLowerCase();
+    const rawAddress = address.trim();
+    let cleanAddress = rawAddress.toLowerCase();
 
-    // Check if recipient is an EVM / Ethereum address (0x...)
-    const isEvmFormat = /^0x[a-f0-9]{40}$/i.test(cleanAddress);
-    if (cleanAddress.startsWith("0x")) {
-      if (!isEvmFormat) {
-        return NextResponse.json({
-          status: "UNVERIFIED",
-          isVerified: false,
-          walletAddress: cleanAddress,
-          chainType: "EVM",
-          reason: "Invalid EVM address format. Must be a 42-character hexadecimal string starting with 0x.",
-        });
-      }
+    // Detect destination blockchain architecture
+    const chainInfo = detectChainFromAddress(rawAddress);
 
-      // Look up counterparty in verified registry
-      const recipient = await findCounterparty(cleanAddress, paymentId);
+    // If it's a cross-chain address (non-NEAR)
+    if (chainInfo.chain !== "NEAR Protocol") {
+      const recipient = await findCounterparty(rawAddress, paymentId);
+
       if (recipient && recipient.verificationStatus === "VERIFIED") {
         return NextResponse.json({
           status: "VERIFIED",
           isVerified: true,
-          chainType: "EVM",
-          targetChain: "Ethereum / Base (EVM)",
-          settlementRail: "NEAR Chain Signatures (MPC)",
+          chain: chainInfo.chain,
+          targetChain: chainInfo.chain,
+          settlementRail: chainInfo.rail,
+          currency: chainInfo.currency,
           displayName: recipient.displayName,
           paymentId: recipient.paymentId,
-          walletAddress: cleanAddress,
+          walletAddress: rawAddress,
           nearAccountId: recipient.walletAddress,
-          reason: `Verified Ethereum counterparty for '${recipient.displayName}'. Settlements will route over the NEAR Chain Signatures MPC Rail.`,
+          reason: `Verified ${chainInfo.chain} address for '${recipient.displayName}'. Settlement routes via ${chainInfo.rail}.`,
         });
       }
 
@@ -55,28 +49,30 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           status: recipient.verificationStatus || "WARNING",
           isVerified: recipient.verificationStatus === "VERIFIED",
-          chainType: "EVM",
-          targetChain: "Ethereum / Base (EVM)",
-          settlementRail: "NEAR Chain Signatures (MPC)",
+          chain: chainInfo.chain,
+          targetChain: chainInfo.chain,
+          settlementRail: chainInfo.rail,
+          currency: chainInfo.currency,
           displayName: recipient.displayName,
-          walletAddress: cleanAddress,
-          reason: `Ethereum address matched to '${recipient.displayName}'. Attestation status: ${recipient.verificationStatus}.`,
+          walletAddress: rawAddress,
+          reason: `${chainInfo.chain} address matched to '${recipient.displayName}'. Status: ${recipient.verificationStatus}.`,
         });
       }
 
-      // Valid EVM address, routes via NEAR Chain Signatures MPC
+      // Valid cross-chain address, routes via Intent Solver or MPC
       return NextResponse.json({
         status: "UNVERIFIED",
         isVerified: false,
-        chainType: "EVM",
-        targetChain: "Ethereum / Base (EVM)",
-        settlementRail: "NEAR Chain Signatures (MPC)",
-        walletAddress: cleanAddress,
-        reason: `Valid 20-byte EVM address. Routes via NEAR Chain Signatures MPC Rail to Ethereum/Base. No legal business KYC attestation filed in PaySure directory yet.`,
+        chain: chainInfo.chain,
+        targetChain: chainInfo.chain,
+        settlementRail: chainInfo.rail,
+        currency: chainInfo.currency,
+        walletAddress: rawAddress,
+        reason: `Valid ${chainInfo.chain} destination address. Routes via ${chainInfo.rail}. No corporate KYC attestation filed in PaySure directory yet.`,
       });
     }
 
-    // Gracefully handle common typos like .tesnet -> .testnet
+    // NEAR Protocol address handling
     if (cleanAddress.endsWith(".tesnet")) {
       cleanAddress = cleanAddress.replace(/\.tesnet$/, ".testnet");
     }
@@ -115,6 +111,9 @@ export async function POST(req: NextRequest) {
         status: "UNVERIFIED",
         isVerified: false,
         walletAddress: cleanAddress,
+        chain: "NEAR Protocol",
+        targetChain: "NEAR Protocol",
+        settlementRail: "NEAR Native",
         reason: `CRITICAL ALERT: Account '${cleanAddress}' does not exist on NEAR Testnet (verified against live RPC https://rpc.testnet.near.org). Do not send funds!`,
       });
     }
@@ -136,6 +135,9 @@ export async function POST(req: NextRequest) {
             isVerified: false,
             displayName: recipient.displayName,
             walletAddress: cleanAddress,
+            chain: "NEAR Protocol",
+            targetChain: "NEAR Protocol",
+            settlementRail: "NEAR Native",
             reason: `CRITICAL MISMATCH: Invoice names payee as '${name}', but account ID is registered to '${recipient.displayName}'. Fraud risk alert!`,
           });
         }
@@ -147,6 +149,9 @@ export async function POST(req: NextRequest) {
         displayName: recipient.displayName,
         paymentId: recipient.paymentId,
         walletAddress: recipient.walletAddress,
+        chain: "NEAR Protocol",
+        targetChain: "NEAR Protocol",
+        settlementRail: "NEAR Native",
         reason: `Account '${cleanAddress}' is live on NEAR Testnet and matches verified entity '${recipient.displayName}'. Confirmation of Payee passed.`,
       });
     }
@@ -157,6 +162,9 @@ export async function POST(req: NextRequest) {
         isVerified: recipient.verificationStatus === "VERIFIED",
         displayName: recipient.displayName,
         walletAddress: cleanAddress,
+        chain: "NEAR Protocol",
+        targetChain: "NEAR Protocol",
+        settlementRail: "NEAR Native",
         reason: `Account is active on NEAR Testnet (balance: ~${onChainBalance} NEAR). Organization attestation status: ${recipient.verificationStatus}.`,
       });
     }
@@ -166,6 +174,9 @@ export async function POST(req: NextRequest) {
       status: "UNVERIFIED",
       isVerified: false,
       walletAddress: cleanAddress,
+      chain: "NEAR Protocol",
+      targetChain: "NEAR Protocol",
+      settlementRail: "NEAR Native",
       reason: `Live active NEAR Testnet account confirmed on-chain (balance: ~${onChainBalance} NEAR). No business KYC attestation filed in PaySure yet.`,
     });
   } catch (error: any) {

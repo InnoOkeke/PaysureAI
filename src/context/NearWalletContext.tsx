@@ -219,7 +219,7 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
                 },
               },
               BigInt("300000000000000"), // 300 TGas for MPC
-              BigInt("1") // 1 yoctoNEAR
+              BigInt(depositYocto || "1") // Attach user-specified payment deposit in yoctoNEAR
             ),
           ],
         });

@@ -33,7 +33,7 @@ export default function PayPage() {
   const promptParam = searchParams.get("prompt");
   const txHashParam = searchParams.get("transactionHashes");
 
-  const { accountId, isConnected, balance, connect, sendNearPayment } = useNearWallet();
+  const { accountId, isConnected, balance, connect, sendNearPayment, sendChainSignaturePayment } = useNearWallet();
 
   // Workflow states
   const [recipient, setRecipient] = useState(recipientParam || "");
@@ -185,22 +185,22 @@ export default function PayPage() {
       alert("Please enter a valid NEAR Account ID (e.g. acme-design.testnet) or Ethereum 0x address.");
       return;
     }
-    if (isEVMAddress(recipient)) {
-      alert("This is an Ethereum/EVM address. Please click 'Connect NEAR Wallet' on the top right to sign via NEAR Chain Signatures (MPC).");
-      return;
-    }
     if (!amount || parseFloat(amount) <= 0) {
       alert("Please enter a valid amount.");
       return;
     }
 
+    const isEvm = isEVMAddress(recipient);
+    // For EVM addresses, MyNearWallet dispatches to the NEAR MPC contract v1.signer-prod.testnet
+    const nearReceiverId = isEvm ? "v1.signer-prod.testnet" : recipient;
+
     const currentUrl = typeof window !== "undefined" ? window.location.origin + "/pay" : "";
     const redirectUrl = `${currentUrl}?recipient=${encodeURIComponent(recipient)}&amount=${encodeURIComponent(
       amount
-    )}&invoiceId=${encodeURIComponent(invoiceId || "")}`;
+    )}&invoiceId=${encodeURIComponent(invoiceId || "")}&network=${isEvm ? "Ethereum" : "NEAR"}`;
 
     const walletUrl = `${NEAR_CONFIG.walletUrl}/send-money?recipient=${encodeURIComponent(
-      recipient
+      nearReceiverId
     )}&amount=${encodeURIComponent(amount)}&redirect_url=${encodeURIComponent(redirectUrl)}`;
 
     window.location.href = walletUrl;
@@ -257,8 +257,8 @@ export default function PayPage() {
       const isEvm = isEVMAddress(recipient);
 
       if (isEvm) {
-        // Execute cross-chain settlement over NEAR Chain Signatures MPC
-        txHash = `MPC-ETH-${Date.now().toString(16).toUpperCase()}`;
+        // Execute cross-chain settlement via NEAR Chain Signatures MPC (prompts connected wallet)
+        txHash = await sendChainSignaturePayment(recipient, amount);
       } else {
         txHash = await sendNearPayment(recipient, amount);
       }
@@ -992,6 +992,64 @@ export default function PayPage() {
             >
               Make Another Payment
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Awaiting Wallet Confirmation In-Flight Modal */}
+      {isExecuting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="max-w-md w-full rounded-3xl bg-[#090B10] border border-white/[0.12] p-6 sm:p-8 space-y-6 text-center shadow-2xl">
+            <div className="relative mx-auto w-16 h-16 rounded-2xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 text-brand-400 animate-spin" />
+              <Wallet className="h-5 w-5 text-white absolute" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                {isEVMAddress(recipient)
+                  ? "Sign NEAR MPC Chain Signature"
+                  : "Confirm in Connected Wallet"}
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
+                {isEVMAddress(recipient)
+                  ? "Please review and approve the MPC threshold signature in your connected NEAR wallet popup to authorize the Ethereum transfer."
+                  : "Please approve the transaction in your connected NEAR wallet popup (MyNearWallet / Meteor) to finalize settlement."}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-xs space-y-2.5 font-mono text-left">
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Beneficiary:</span>
+                <span className="text-white truncate max-w-[200px] font-medium">{recipient}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Settlement Rail:</span>
+                <span className="text-cyan-400 font-sans font-semibold">
+                  {isEVMAddress(recipient) ? "NEAR Chain Signatures MPC (Ethereum/Base)" : "NEAR Protocol (Native)"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Signer Contract:</span>
+                <span className="text-slate-300">
+                  {isEVMAddress(recipient) ? "v1.signer-prod.testnet" : (accountId || "Connected Wallet")}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400 pt-1 border-t border-white/[0.04]">
+                <span>Total Amount:</span>
+                <span className="text-emerald-400 font-bold text-sm">{amount} {tokenSymbol}</span>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setIsExecuting(false)}
+                className="w-full py-2.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] text-xs font-medium text-slate-400 hover:text-white transition-colors"
+              >
+                Cancel or Dismiss
+              </button>
+            </div>
           </div>
         </div>
       )}

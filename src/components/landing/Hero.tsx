@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, CheckCircle2, TrendingUp, Sparkles, FileText, Send, Wallet } from "lucide-react";
+import { ArrowRight, ShieldCheck, CheckCircle2, TrendingUp, FileText, Send, Wallet } from "lucide-react";
 import { useNearWallet } from "@/context/NearWalletContext";
 
 export function Hero() {
@@ -15,12 +15,6 @@ export function Hero() {
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
-          {/* Platform Capability Badges */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 text-brand-300 text-xs font-semibold mb-6 border border-brand-500/20 backdrop-blur-sm shadow-sm shadow-brand-500/10">
-            <Sparkles className="h-3.5 w-3.5 text-brand-400" />
-            <span>Enterprise Web3 Invoicing • AI Security &amp; Defense • Multi-Chain Intents</span>
-          </div>
-
           {/* Main Title */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1]">
             Autonomous Invoicing &amp; <br />

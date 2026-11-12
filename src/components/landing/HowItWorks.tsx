@@ -57,7 +57,7 @@ export function HowItWorks() {
   ];
 
   return (
-    <section className="py-20 sm:py-28 bg-navy-950 fintech-grid border-t border-navy-800/80">
+    <section id="how-it-works" className="py-20 sm:py-28 bg-navy-950 fintech-grid border-t border-navy-800/80">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto">
           <span className="text-xs font-semibold uppercase tracking-wider text-brand-400">

@@ -38,7 +38,7 @@ export function SecuritySection() {
   ];
 
   return (
-    <section className="py-20 sm:py-28 bg-navy-950/80 border-t border-navy-800">
+    <section id="security" className="py-20 sm:py-28 bg-navy-950/80 border-t border-navy-800">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>

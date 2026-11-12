@@ -15,6 +15,7 @@ import {
   ArrowUpRight
 } from "lucide-react";
 import { PaySureLogo } from "@/components/brand/Logos";
+import { useNearWallet } from "@/context/NearWalletContext";
 
 interface Message {
   role: "user" | "assistant";
@@ -23,6 +24,7 @@ interface Message {
 
 export function FloatingCopilot() {
   const pathname = usePathname();
+  const { isConnected } = useNearWallet();
   const [isOpen, setIsOpen] = useState(false);
   const [hasDismissedTeaser, setHasDismissedTeaser] = useState(false);
   const [showTeaser, setShowTeaser] = useState(false);
@@ -149,6 +151,11 @@ export function FloatingCopilot() {
     setShowTeaser(false);
     handleSend(promptText);
   };
+
+  // Only show the AI assistant inside the app AFTER the user has connected their wallet
+  if (!isConnected || pathname === "/") {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">

@@ -60,12 +60,22 @@ export default function DashboardPage() {
       {/* Top Banner / Welcome */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-navy-800">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
             <span className="text-xs font-semibold uppercase tracking-wider text-brand-400">
               Autonomous Invoicing &amp; Payments
             </span>
             <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
-            <span className="text-xs text-slate-400">NEAR Protocol</span>
+            <a
+              href="https://app.paysure.ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-500/10 hover:bg-brand-500/20 text-brand-300 border border-brand-500/20 text-[11px] font-mono transition-colors"
+              title="Open Official Web3 Application URL: app.paysure.ai"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>app.paysure.ai</span>
+              <ExternalLink className="h-2.5 w-2.5 opacity-70" />
+            </a>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             Financial Dashboard

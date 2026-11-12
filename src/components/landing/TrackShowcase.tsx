@@ -5,7 +5,6 @@ import Link from "next/link";
 import { 
   DollarSign, 
   ShieldCheck, 
-  Sparkles, 
   FileText, 
   AlertTriangle, 
   CheckCircle2, 
@@ -25,13 +24,9 @@ export function TrackShowcase() {
   const [isSimulating, setIsSimulating] = useState(false);
 
   return (
-    <section className="py-20 sm:py-28 bg-navy-900/60 border-t border-navy-800 relative">
+    <section id="architecture" className="py-20 sm:py-28 bg-navy-900/60 border-t border-navy-800 relative">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 text-brand-300 text-xs font-semibold mb-3 border border-brand-500/20">
-            <Sparkles className="h-4 w-4 text-brand-400" />
-            <span>Enterprise Platform Architecture</span>
-          </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
             3 Architectural Pillars. 1 Autonomous Financial Platform.
           </h2>
@@ -75,7 +70,7 @@ export function TrackShowcase() {
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <Sparkles className="h-4 w-4" />
+              <Zap className="h-4 w-4" />
               <span>Autonomous Business &amp; Intents</span>
             </button>
           </div>

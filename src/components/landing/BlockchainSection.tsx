@@ -24,7 +24,7 @@ export function BlockchainSection() {
   ];
 
   return (
-    <section className="py-20 sm:py-28 bg-navy-950 border-t border-navy-800/80">
+    <section id="protocol" className="py-20 sm:py-28 bg-navy-950 border-t border-navy-800/80">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 text-brand-400 text-xs font-semibold mb-3 border border-brand-500/20">

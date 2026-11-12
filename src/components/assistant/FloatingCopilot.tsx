@@ -31,7 +31,7 @@ interface Message {
 export function FloatingCopilot() {
   const pathname = usePathname();
   const router = useRouter();
-  const { isConnected } = useNearWallet();
+  const { isConnected, balance } = useNearWallet();
   const [isOpen, setIsOpen] = useState(false);
   const [hasDismissedTeaser, setHasDismissedTeaser] = useState(false);
   const [showTeaser, setShowTeaser] = useState(false);
@@ -365,16 +365,35 @@ export function FloatingCopilot() {
                             {m.intent.policyCheck?.autoExecutable ? "✓ Policy Approved" : "⚠ Sign-off Required"}
                           </span>
                         </div>
+
+                        {isConnected && balance && (
+                          <div className="flex justify-between text-slate-400">
+                            <span>Wallet Balance:</span>
+                            <span className={m.intent.extractedAmount > parseFloat(balance) ? "text-rose-400 font-bold" : "text-slate-300"}>
+                              {balance} NEAR {m.intent.extractedAmount > parseFloat(balance) ? "(Insufficient)" : ""}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <button
                         type="button"
+                        disabled={isConnected && Boolean(balance) && m.intent.extractedAmount > parseFloat(balance)}
                         onClick={() => handleApplyAndPay(m.intent)}
-                        className="w-full mt-2 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-md shadow-emerald-600/20 transition-all active:scale-[0.98]"
+                        className="w-full mt-2 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-white/[0.04] disabled:text-slate-500 disabled:border disabled:border-white/[0.08] disabled:cursor-not-allowed text-white font-semibold text-xs shadow-md shadow-emerald-600/20 transition-all active:scale-[0.98]"
                       >
-                        <Wallet className="h-3.5 w-3.5" />
-                        <span>Apply &amp; Pay Now</span>
-                        <ArrowRight className="h-3.5 w-3.5" />
+                        {isConnected && Boolean(balance) && m.intent.extractedAmount > parseFloat(balance) ? (
+                          <>
+                            <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                            <span>Insufficient Balance ({balance} NEAR)</span>
+                          </>
+                        ) : (
+                          <>
+                            <Wallet className="h-3.5 w-3.5" />
+                            <span>Apply &amp; Pay Now</span>
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          </>
+                        )}
                       </button>
                     </div>
                   )}

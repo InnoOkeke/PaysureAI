@@ -58,6 +58,12 @@ export default function PayPage() {
   const [invoiceReference, setInvoiceReference] = useState(memoParam || "");
   const [invoiceId, setInvoiceId] = useState(invoiceIdParam || "");
 
+  // Dynamic balance validation
+  const numericAmount = parseFloat(amount || "0");
+  const numericBalance = isConnected && balance ? parseFloat(balance) : null;
+  const isInsufficientBalance = numericBalance !== null && !isNaN(numericAmount) && numericAmount > numericBalance;
+  const isAmountValid = !isNaN(numericAmount) && numericAmount > 0 && !isInsufficientBalance;
+
   // Verification state
   const [verification, setVerification] = useState<any>(null);
   const [verifying, setVerifying] = useState(false);
@@ -269,6 +275,10 @@ export default function PayPage() {
       alert("Please enter a valid amount.");
       return;
     }
+    if (isInsufficientBalance) {
+      alert(`Insufficient funds. Your available balance is ${balance} NEAR.`);
+      return;
+    }
 
     const isCrossChain = selectedChainId !== "near";
     const nearReceiverId = isCrossChain ? "v1.signer-prod.testnet" : recipient;
@@ -313,6 +323,10 @@ export default function PayPage() {
       alert("Please enter a valid amount.");
       return;
     }
+    if (isInsufficientBalance) {
+      alert(`Insufficient funds. Your available balance is ${balance} NEAR.`);
+      return;
+    }
     setStep(2);
   };
 
@@ -327,6 +341,10 @@ export default function PayPage() {
     }
     if (!amount || parseFloat(amount) <= 0) {
       alert("Please enter a valid amount.");
+      return;
+    }
+    if (isInsufficientBalance) {
+      alert(`Insufficient funds. Your available balance is ${balance} NEAR.`);
       return;
     }
 
@@ -615,6 +633,11 @@ export default function PayPage() {
                       <span className="font-mono font-semibold text-emerald-400 mt-1 block">
                         ${resolvedIntent.extractedAmount.toFixed(2)} {resolvedIntent.extractedCurrency}
                       </span>
+                      {numericBalance !== null && resolvedIntent.extractedAmount > numericBalance && (
+                        <span className="text-[10px] text-rose-400 font-sans font-medium block mt-0.5">
+                          Exceeds balance ({balance} NEAR)
+                        </span>
+                      )}
                     </div>
 
                     <div className="bg-white/[0.02] p-3 rounded-xl border border-white/[0.06]">
@@ -811,7 +834,14 @@ export default function PayPage() {
                     </label>
                     {isConnected && (
                       <span className="text-[11px] text-slate-400">
-                        Available: <strong className="text-brand-300 font-mono">{balance} NEAR</strong>
+                        Available:{" "}
+                        <strong
+                          className={`font-mono ${
+                            isInsufficientBalance ? "text-rose-400 font-bold" : "text-brand-300"
+                          }`}
+                        >
+                          {balance} NEAR
+                        </strong>
                       </span>
                     )}
                   </div>
@@ -822,9 +852,22 @@ export default function PayPage() {
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="0.00"
-                    className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+                    className={`w-full bg-white/[0.02] border rounded-xl px-4 py-3 text-sm text-white font-mono placeholder-slate-500 focus:outline-none transition-colors ${
+                      isInsufficientBalance
+                        ? "border-rose-500/70 focus:border-rose-500 bg-rose-950/20 text-rose-200"
+                        : "border-white/[0.08] focus:border-brand-500 text-white"
+                    }`}
                     required
                   />
+                  {isInsufficientBalance && (
+                    <div className="flex items-center gap-1.5 text-rose-400 text-xs mt-1 font-medium animate-in fade-in">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        Insufficient balance: You have <strong>{balance} NEAR</strong>, but you entered{" "}
+                        <strong>{amount} NEAR</strong>.
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -857,12 +900,25 @@ export default function PayPage() {
               </div>
 
               {/* Submit Action */}
-              <div className="pt-4 border-t border-white/[0.06] flex justify-end">
+              <div className="pt-4 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs">
+                  {isInsufficientBalance && (
+                    <span className="text-rose-400 font-medium flex items-center gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      <span>Amount exceeds available wallet balance</span>
+                    </span>
+                  )}
+                </div>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/25 transition-all active:scale-[0.98]"
+                  disabled={!isAmountValid || !recipient}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-brand-600 hover:bg-brand-500 disabled:bg-white/[0.04] disabled:text-slate-500 disabled:border disabled:border-white/[0.08] disabled:cursor-not-allowed text-white text-xs font-semibold shadow-lg shadow-brand-600/25 transition-all active:scale-[0.98]"
                 >
-                  <span>Review &amp; Verify Recipient</span>
+                  <span>
+                    {isInsufficientBalance
+                      ? "Insufficient Balance"
+                      : "Review & Verify Recipient"}
+                  </span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
@@ -1002,6 +1058,18 @@ export default function PayPage() {
             </div>
           )}
 
+          {isInsufficientBalance && (
+            <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-500/40 flex items-start gap-3 text-rose-300 text-xs">
+              <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Insufficient Account Balance</p>
+                <p className="mt-1 text-slate-300">
+                  Your connected wallet has <strong className="text-white">{balance} NEAR</strong>, but this payment requires <strong className="text-rose-300">{amount} NEAR</strong>. Please go back to reduce the transfer amount or top up your testnet wallet.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="rounded-2xl bg-white/[0.02] border border-white/[0.07] p-5 space-y-3.5 text-xs">
             <div className="flex justify-between items-center py-1.5 border-b border-white/[0.06]">
               <span className="text-slate-400">Recipient Account ID</span>
@@ -1073,13 +1141,18 @@ export default function PayPage() {
                 <button
                   type="button"
                   onClick={handleExecutePayment}
-                  disabled={isExecuting}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-emerald-600/25 transition-all"
+                  disabled={isExecuting || isInsufficientBalance}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-white/[0.04] disabled:text-slate-500 disabled:border disabled:border-white/[0.08] disabled:cursor-not-allowed text-white text-xs font-semibold shadow-lg shadow-emerald-600/25 transition-all"
                 >
                   {isExecuting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
                       <span>Signing Transaction...</span>
+                    </>
+                  ) : isInsufficientBalance ? (
+                    <>
+                      <AlertTriangle className="h-4 w-4 text-amber-400" />
+                      <span>Insufficient Balance ({balance} NEAR Available)</span>
                     </>
                   ) : (
                     <>
@@ -1092,7 +1165,8 @@ export default function PayPage() {
                 <button
                   type="button"
                   onClick={handlePayWithMyNearWallet}
-                  className="inline-flex items-center gap-1.5 px-4 py-3 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.08] text-xs font-medium transition-all"
+                  disabled={isInsufficientBalance}
+                  className="inline-flex items-center gap-1.5 px-4 py-3 rounded-full bg-white/[0.04] hover:bg-white/[0.08] disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 border border-white/[0.08] text-xs font-medium transition-all"
                   title="Or transfer directly via MyNearWallet web"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />

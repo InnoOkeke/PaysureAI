@@ -6,42 +6,16 @@ import { ParsedCommand, ParsedCommandSchema, PayCommandSchema } from "../ai/sche
 import { PrismaService } from "../prisma/prisma.service";
 import { NearService, PaymentIntent, VerificationTier } from "../near/near.service";
 import { RecipientsService } from "../recipients/recipients.service";
+import {
+  CounterpartyRecord,
+  DEFAULT_RECIPIENTS,
+  recipientAddresses,
+} from "../recipients/recipient-defaults";
 import { PolicyEvaluationResult, TreasuryService } from "../treasury/treasury.service";
 import { ContextBuilderService } from "./context-builder.service";
 import { parseDeterministic } from "./deterministic-parser";
 
-const COUNTERPARTY_DIRECTORY = [
-  {
-    displayName: "John Kennedy",
-    paymentId: "john-kennedy",
-    nearAccountId: "john-kennedy.testnet",
-    evmAddress: "0x71C8360f3a8b417c805F99D4133A89f07447d251",
-    solanaAddress: "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-    verificationStatus: "VERIFIED" as VerificationTier,
-    isOfficialPartner: true,
-    transactionCount: 8,
-  },
-  {
-    displayName: "Acme Web3 Design Studio",
-    paymentId: "acme-design",
-    nearAccountId: "acme-design.testnet",
-    evmAddress: "0x456569838f1d43009A91ebA4263147Afd7233483",
-    solanaAddress: "Acme482kXz9vQ7wPzN9bL1m9k6qR8s2vY5t1u4w3x2z1",
-    verificationStatus: "VERIFIED" as VerificationTier,
-    isOfficialPartner: true,
-    transactionCount: 14,
-  },
-  {
-    displayName: "Satoshi Freelance Engineering",
-    paymentId: "satoshi-dev",
-    nearAccountId: "satoshi-dev.testnet",
-    evmAddress: "0x1234567890123456789012345678901234567890",
-    solanaAddress: "Satosh19428571829471928471928471928471928471",
-    verificationStatus: "VERIFIED" as VerificationTier,
-    isOfficialPartner: false,
-    transactionCount: 5,
-  },
-];
+
 
 export interface ResolvedPayee {
   displayName: string;
@@ -71,7 +45,10 @@ export interface ResolvedIntent {
   };
   settlementExecution: {
     sourceAccount: string;
-    settlementRail: "NEAR Native" | "NEAR Chain Signatures (MPC)" | "NEAR Intent Solver";
+    settlementRail:
+      | "NEAR Native"
+      | "NEAR Chain Signatures (MPC)"
+      | "NEAR Intent Solver (Model A)";
     mpcSignerDerivation?: string;
   };
   intent: PaymentIntent;
@@ -172,23 +149,15 @@ export class IntentService {
       dbRecipient?.displayName ?? directoryMatch?.displayName ?? this.titleCase(query);
     const accountId =
       dbRecipient?.walletAddress ??
-      directoryMatch?.nearAccountId ??
+      directoryMatch?.walletAddress ??
       (this.near.isNearNamedAccount(query) ? this.near.normalizeAccountId(query) : this.slug(query));
 
-    let targetChainAddress = accountId;
-    let warning: string | undefined;
-
-    if (targetChain === "Base" || targetChain === "Ethereum" || targetChain === "Arbitrum") {
-      targetChainAddress = directoryMatch?.evmAddress ?? accountId;
-      if (!directoryMatch?.evmAddress) {
-        warning = `No ${targetChain} address is registered for '${displayName}'. Add one before settlement.`;
-      }
-    } else if (targetChain === "Solana") {
-      targetChainAddress = directoryMatch?.solanaAddress ?? accountId;
-      if (!directoryMatch?.solanaAddress) {
-        warning = `No Solana address is registered for '${displayName}'. Add one before settlement.`;
-      }
-    }
+    const { address: targetChainAddress, warning } = this.resolveTargetAddress(
+      directoryMatch,
+      targetChain,
+      accountId,
+      displayName
+    );
 
     const verificationStatus =
       (dbRecipient?.verificationStatus as VerificationTier | undefined) ??
@@ -205,10 +174,13 @@ export class IntentService {
       isOfficialPartner: directoryMatch?.isOfficialPartner ?? false,
     });
 
+    const category =
+      targetChain === "NEAR Protocol" ? "Operations & Freelance" : "Cross-Chain Operations";
+
     const { evaluation: policyCheck, velocity } = await this.treasury.evaluateForAccount(
       senderAccount,
       amountUSD,
-      "Operations & Freelance",
+      category,
       reputationScore,
       verificationStatus,
       targetChainAddress
@@ -219,8 +191,7 @@ export class IntentService {
       policyCheck.requiresHumanSignoff = true;
     }
 
-    const settlementRail =
-      targetChain === "NEAR Protocol" ? "NEAR Native" : "NEAR Chain Signatures (MPC)";
+    const settlementRail = this.settlementRailFor(targetChain);
 
     const intent = this.near.createPaymentIntent({
       senderNearAccount: senderAccount,
@@ -264,17 +235,61 @@ export class IntentService {
     };
   }
 
-  private findDirectoryMatch(query: string) {
+  private findDirectoryMatch(query: string): CounterpartyRecord | undefined {
     const clean = query.trim().toLowerCase();
     const tokens = clean.split(/[^a-z0-9]+/).filter(Boolean);
-    return COUNTERPARTY_DIRECTORY.find((entry) => {
-      const candidate = `${entry.displayName} ${entry.paymentId} ${entry.nearAccountId}`.toLowerCase();
+    return DEFAULT_RECIPIENTS.find((entry) => {
+      const candidate =
+        `${entry.displayName} ${entry.paymentId} ${recipientAddresses(entry).join(" ")}`.toLowerCase();
       return (
-        entry.nearAccountId.toLowerCase() === clean ||
         entry.paymentId.toLowerCase() === clean ||
+        recipientAddresses(entry).some((value) => value.toLowerCase() === clean) ||
         (tokens.length > 0 && tokens.every((token) => candidate.includes(token)))
       );
     });
+  }
+
+  private resolveTargetAddress(
+    match: CounterpartyRecord | undefined,
+    targetChain: string,
+    fallbackAddress: string,
+    displayName: string
+  ): { address: string; warning?: string } {
+    const addresses: Record<string, string | undefined> = {
+      Base: match?.evmAddress,
+      Ethereum: match?.evmAddress,
+      Arbitrum: match?.evmAddress,
+      Bitcoin: match?.bitcoinAddress,
+      Solana: match?.solanaAddress,
+      "Ripple (XRP)": match?.xrpAddress,
+      Cosmos: match?.cosmosAddress,
+      "Stacks (Bitcoin L2)": match?.stacksAddress,
+      Stellar: match?.stellarAddress,
+    };
+
+    if (targetChain === "NEAR Protocol") {
+      return { address: fallbackAddress };
+    }
+
+    const address = addresses[targetChain];
+    if (!address) {
+      return {
+        address: fallbackAddress,
+        warning: `No ${targetChain} address is registered for '${displayName}'. Add one before settlement.`,
+      };
+    }
+
+    return { address };
+  }
+
+  private settlementRailFor(
+    targetChain: string
+  ): "NEAR Native" | "NEAR Chain Signatures (MPC)" | "NEAR Intent Solver (Model A)" {
+    if (targetChain === "NEAR Protocol") return "NEAR Native";
+    if (targetChain === "Ethereum" || targetChain === "Bitcoin") {
+      return "NEAR Chain Signatures (MPC)";
+    }
+    return "NEAR Intent Solver (Model A)";
   }
 
   private normalizeChain(chain: string): string {
@@ -284,6 +299,11 @@ export class IntentService {
     if (lower.includes("eth")) return "Ethereum";
     if (lower.includes("arb")) return "Arbitrum";
     if (lower.includes("sol")) return "Solana";
+    if (lower.includes("stacks") || lower.includes("stx")) return "Stacks (Bitcoin L2)";
+    if (lower.includes("bitcoin") || lower.includes("btc")) return "Bitcoin";
+    if (lower.includes("xrp") || lower.includes("ripple")) return "Ripple (XRP)";
+    if (lower.includes("cosmos") || lower.includes("atom")) return "Cosmos";
+    if (lower.includes("stellar") || lower.includes("xlm")) return "Stellar";
     return "NEAR Protocol";
   }
 

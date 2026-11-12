@@ -11,7 +11,18 @@ const CHAIN_NAMES: Record<string, string> = {
 
 function normalizeChain(raw: string | undefined): string {
   if (!raw) return "NEAR Protocol";
-  return CHAIN_NAMES[raw.toLowerCase()] ?? raw;
+  const lower = raw.toLowerCase();
+  if (lower.includes("near")) return "NEAR Protocol";
+  if (lower.includes("base")) return "Base";
+  if (lower.includes("eth")) return "Ethereum";
+  if (lower.includes("arb")) return "Arbitrum";
+  if (lower.includes("sol")) return "Solana";
+  if (lower.includes("bitcoin") || lower.includes("btc")) return "Bitcoin";
+  if (lower.includes("xrp") || lower.includes("ripple")) return "Ripple (XRP)";
+  if (lower.includes("cosmos") || lower.includes("atom")) return "Cosmos";
+  if (lower.includes("stacks") || lower.includes("stx")) return "Stacks (Bitcoin L2)";
+  if (lower.includes("stellar") || lower.includes("xlm")) return "Stellar";
+  return CHAIN_NAMES[lower] ?? raw;
 }
 
 function normalizeCurrency(
@@ -37,7 +48,7 @@ function cleanRecipient(value: string): string {
 }
 
 function splitTrailingChain(value: string): { recipient: string; chain?: string } {
-  const match = value.match(/\s+on\s+(near|base|ethereum|eth|arbitrum|solana)\s*$/i);
+  const match = value.match(/\s+on\s+(.+?)\s*$/i);
   if (!match) return { recipient: cleanRecipient(value) };
   return {
     recipient: cleanRecipient(value.slice(0, match.index)),
@@ -90,18 +101,19 @@ export function parseDeterministic(input: string): ParsedCommand | null {
   }
 
   const payeeFirst = trimmed.match(
-    /^(?:pay|send|transfer)\s+(.+?)\s+([\d,]+(?:\.\d+)?)\s*(usd|usdc|near|\$)?\s*$/i
+    /^(?:pay|send|transfer)\s+(.+?)\s+([\d,]+(?:\.\d+)?)\s*(usd|usdc|near|\$)?(?:\s+on\s+.+)?\s*$/i
   );
   if (payeeFirst) {
     const amount = Number(payeeFirst[2]!.replace(/,/g, ""));
     const recipient = cleanRecipient(payeeFirst[1]!);
+    const chainMatch = trimmed.match(/\s+on\s+(.+?)\s*$/i);
     if (Number.isFinite(amount) && amount > 0 && recipient) {
       return {
         action: "pay",
         amount,
         currency: normalizeCurrency(payeeFirst[3], trimmed),
         recipientQuery: recipient,
-        targetChain: "NEAR Protocol",
+        targetChain: normalizeChain(chainMatch?.[1]),
         memo: `Conversational Settlement: ${trimmed}`,
       };
     }

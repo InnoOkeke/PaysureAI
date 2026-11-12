@@ -26,6 +26,29 @@ describe("parseDeterministic", () => {
     });
   });
 
+  it("parses payee-first intents with multi-chain destinations", () => {
+    expect(parseDeterministic("Pay LeProf 20 NEAR on Solana")).toMatchObject({
+      action: "pay",
+      amount: 20,
+      currency: "NEAR",
+      recipientQuery: "LeProf",
+      targetChain: "Solana",
+    });
+
+    expect(parseDeterministic("Transfer $120 to Satoshi on Stacks L2")).toMatchObject({
+      action: "pay",
+      amount: 120,
+      recipientQuery: "Satoshi",
+      targetChain: "Stacks (Bitcoin L2)",
+    });
+
+    expect(parseDeterministic("Pay LeProf 15 NEAR on Ripple (XRP)")).toMatchObject({
+      action: "pay",
+      amount: 15,
+      targetChain: "Ripple (XRP)",
+    });
+  });
+
   it("parses payee verification requests", () => {
     expect(parseDeterministic("verify acme-design.testnet")).toMatchObject({
       action: "verify_payee",

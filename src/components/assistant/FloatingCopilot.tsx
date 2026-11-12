@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { 
-  Sparkles, 
   Send, 
   Bot, 
   User, 
@@ -164,8 +163,8 @@ export function FloatingCopilot() {
               }}
               className="flex items-start gap-2.5 cursor-pointer group"
             >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-brand-500/20 text-brand-400 group-hover:scale-110 transition-transform">
-                <Sparkles className="h-4 w-4" />
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-navy-800 text-brand-400 border border-navy-700">
+                <MessageSquare className="h-3.5 w-3.5" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5 mb-0.5">
@@ -324,34 +323,28 @@ export function FloatingCopilot() {
           setIsOpen(!isOpen);
           setShowTeaser(false);
         }}
-        className={`group flex items-center gap-2.5 px-4 py-2.5 rounded-full border shadow-2xl transition-all duration-300 ${
+        className={`group flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border shadow-xl transition-all duration-200 ${
           isOpen
             ? "bg-navy-800 border-navy-700 text-white"
-            : "bg-gradient-to-r from-navy-900 via-navy-850 to-navy-900 border-brand-500/40 hover:border-brand-400 text-white hover:scale-105 shadow-brand-600/25"
+            : "bg-navy-900 hover:bg-navy-850 border-navy-750 hover:border-brand-500/40 text-slate-200 hover:text-white"
         }`}
-        title="Toggle PaySure AI Copilot"
+        title="Toggle Copilot"
       >
-        <div className="relative flex items-center justify-center">
-          <div className="p-1 rounded-lg bg-brand-500/20 text-brand-400 group-hover:rotate-12 transition-transform">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2 rounded-full bg-emerald-400" />
+        <div className="flex items-center justify-center p-1.5 rounded-xl bg-navy-800 text-brand-400 border border-navy-700">
+          <MessageSquare className="h-4 w-4" />
         </div>
 
         <div className="text-left">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold tracking-tight">AI Copilot</span>
-            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-brand-500/20 text-brand-300">
-              Agent
+            <span className="text-xs font-semibold text-white tracking-tight">Support Copilot</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-navy-800 text-slate-400 border border-navy-700">
+              Online
             </span>
           </div>
         </div>
 
-        {isOpen ? (
-          <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-        ) : (
-          <MessageSquare className="h-3.5 w-3.5 text-brand-400" />
+        {isOpen && (
+          <ChevronDown className="h-3.5 w-3.5 text-slate-400 ml-1" />
         )}
       </button>
     </div>

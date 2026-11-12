@@ -30,13 +30,13 @@ export async function POST(req: NextRequest) {
         ? "✓ Autonomous Treasury Approval: Payment is within policy threshold ($250 USD) and daily velocity limits."
         : `⚠ Security Policy Alert: ${intent.policyCheck.violations.join(", ") || "Requires Human Signoff"}`;
 
-      const reply = `🎯 **NEAR Cross-Chain Intent Resolved**:\n\n` +
+      const reply = `**NEAR Cross-Chain Intent Resolved**:\n\n` +
         `• **Target Chain**: ${intent.targetChain} (${intent.settlementExecution.settlementRail})\n` +
         `• **Amount**: $${intent.extractedAmount.toFixed(2)} ${intent.extractedCurrency}\n` +
         `• **Payee**: ${intent.resolvedPayee.displayName} (\`${intent.resolvedPayee.targetChainAddress}\`)\n` +
         `• **Confirmation of Payee**: ${intent.resolvedPayee.verificationStatus} (Trust Score: ${intent.resolvedPayee.reputationScore}/100)\n` +
         `• **Treasury Guardrail**: ${policyMsg}\n\n` +
-        `👉 You can execute this transfer directly on the **[Send Payment page](/pay)**.`;
+        `You can execute this transfer directly on the **[Send Payment page](/pay)**.`;
 
       return NextResponse.json({ reply, intent, provider: AI_PROVIDER_NAME });
     }

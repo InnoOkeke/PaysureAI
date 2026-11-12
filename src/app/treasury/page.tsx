@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { 
   ShieldCheck, 
   AlertTriangle, 
@@ -23,18 +23,54 @@ import { DEFAULT_TREASURY_POLICY } from "@/lib/treasury/policyEngine";
 import { buildSputnikTransferProposal, DEFAULT_SPUTNIK_DAO } from "@/lib/treasury/sputnikDao";
 import { evaluateOutlayerPolicy } from "@/lib/security/outlayer";
 import { formatCurrency } from "@/lib/utils";
+import { useNearWallet } from "@/context/NearWalletContext";
 
 export default function TreasuryPage() {
+  const { accountId } = useNearWallet();
   const [maxSingleTx, setMaxSingleTx] = useState(DEFAULT_TREASURY_POLICY.maxSingleTxAmountUSD);
   const [dailyCap, setDailyCap] = useState(DEFAULT_TREASURY_POLICY.dailyVelocityCapUSD);
   const [autoApproveUnder, setAutoApproveUnder] = useState(DEFAULT_TREASURY_POLICY.autoApproveVerifiedUnderUSD);
   const [killswitch, setKillswitch] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [sputnikSuccess, setSputnikSuccess] = useState<string | null>(null);
+  const [spentTodayUSD, setSpentTodayUSD] = useState(340);
+  const [policyError, setPolicyError] = useState<string | null>(null);
+  const [policyLoading, setPolicyLoading] = useState(false);
+  const [savingPolicy, setSavingPolicy] = useState(false);
 
   const [budgets, setBudgets] = useState(DEFAULT_TREASURY_POLICY.departmentBudgets);
 
-  const spentTodayUSD = 340;
+  useEffect(() => {
+    if (!accountId) return;
+    let cancelled = false;
+
+    setPolicyLoading(true);
+    fetch(`/api/treasury/policy?accountId=${encodeURIComponent(accountId)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled || !data?.policy) return;
+        const policy = data.policy;
+        setMaxSingleTx(policy.maxSingleTxAmountUSD);
+        setDailyCap(policy.dailyVelocityCapUSD);
+        setAutoApproveUnder(policy.autoApproveVerifiedUnderUSD);
+        setKillswitch(policy.emergencyKillswitchActive);
+        if (Array.isArray(policy.departmentBudgets) && policy.departmentBudgets.length > 0) {
+          setBudgets(policy.departmentBudgets);
+        }
+        if (typeof data.velocity?.spentUSD === "number") {
+          setSpentTodayUSD(data.velocity.spentUSD);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setPolicyLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId]);
+
   const velocityPercentage = Math.min(100, Math.round((spentTodayUSD / dailyCap) * 100));
 
   const reputationLeaderboard = [
@@ -76,10 +112,70 @@ export default function TreasuryPage() {
     },
   ];
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 2500);
+    if (!accountId) {
+      setPolicyError("Connect your NEAR wallet to persist treasury policy.");
+      return;
+    }
+
+    setSavingPolicy(true);
+    setPolicyError(null);
+    try {
+      const res = await fetch("/api/treasury/policy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId,
+          maxSingleTxAmountUSD: maxSingleTx,
+          dailyVelocityCapUSD: dailyCap,
+          autoApproveVerifiedUnderUSD: autoApproveUnder,
+          emergencyKillswitchActive: killswitch,
+          departmentBudgets: budgets,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.message || "Failed to save treasury policy.");
+      }
+      const policy = data.policy;
+      setMaxSingleTx(policy.maxSingleTxAmountUSD);
+      setDailyCap(policy.dailyVelocityCapUSD);
+      setAutoApproveUnder(policy.autoApproveVerifiedUnderUSD);
+      setKillswitch(policy.emergencyKillswitchActive);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 2500);
+    } catch (err: any) {
+      setPolicyError(err.message || "Failed to save treasury policy.");
+    } finally {
+      setSavingPolicy(false);
+    }
+  };
+
+  const handleKillswitch = async () => {
+    const next = !killswitch;
+    setKillswitch(next);
+    if (!accountId) {
+      setPolicyError("Connect your NEAR wallet to persist the killswitch state.");
+      return;
+    }
+
+    setPolicyError(null);
+    try {
+      const res = await fetch("/api/treasury/killswitch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId, active: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.message || "Failed to update killswitch.");
+      }
+      setKillswitch(data.policy.emergencyKillswitchActive);
+    } catch (err: any) {
+      setKillswitch(!next);
+      setPolicyError(err.message || "Failed to update killswitch.");
+    }
   };
 
   const handleTestSputnikProposal = () => {
@@ -115,7 +211,7 @@ export default function TreasuryPage() {
 
         {/* Emergency Killswitch Toggle */}
         <button
-          onClick={() => setKillswitch(!killswitch)}
+          onClick={handleKillswitch}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg ${
             killswitch
               ? "bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30 animate-pulse"
@@ -238,7 +334,9 @@ export default function TreasuryPage() {
             />
           </div>
           <p className="mt-2 text-[11px] text-slate-400">
-            {velocityPercentage}% of daily velocity cap utilized. Rolling 24h window.
+            {policyLoading
+              ? "Syncing rolling 24h velocity from the backend..."
+              : `${velocityPercentage}% of daily velocity cap utilized. Rolling 24h window.`}
           </p>
         </div>
 
@@ -280,6 +378,13 @@ export default function TreasuryPage() {
             </div>
           </div>
         </div>
+
+        {policyError && (
+          <div className="mb-5 p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
+            <span>{policyError}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSave} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -338,16 +443,29 @@ export default function TreasuryPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center justify-between pt-2 gap-3">
             <span className="text-xs text-slate-400 font-mono">
-              Status: <strong className="text-emerald-400">GUARDRAILS ARMED</strong>
+              {accountId ? (
+                <>
+                  Account: <strong className="text-brand-300">{accountId}</strong>
+                </>
+              ) : (
+                <span className="text-amber-300">Connect wallet to persist policy</span>
+              )}
             </span>
             <button
               type="submit"
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/25 transition-all"
+              disabled={savingPolicy}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-brand-600/25 transition-all"
             >
               <Save className="h-4 w-4" />
-              <span>{savedSuccess ? "Guardrails Saved!" : "Save Policy Config"}</span>
+              <span>
+                {savingPolicy
+                  ? "Saving..."
+                  : savedSuccess
+                    ? "Guardrails Saved!"
+                    : "Save Policy Config"}
+              </span>
             </button>
           </div>
         </form>

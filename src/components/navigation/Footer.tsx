@@ -47,7 +47,7 @@ export function Footer() {
             rel="noopener noreferrer"
             className="hover:text-white transition-colors flex items-center gap-1"
           >
-            <span>NEAR Hackathon</span>
+            <span>NEAR Ecosystem</span>
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>

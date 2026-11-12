@@ -15,10 +15,10 @@ export function Hero() {
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
-          {/* Track Badges */}
+          {/* Platform Capability Badges */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 text-brand-300 text-xs font-semibold mb-6 border border-brand-500/20 backdrop-blur-sm shadow-sm shadow-brand-500/10">
             <Sparkles className="h-3.5 w-3.5 text-brand-400" />
-            <span>NEAR Hackathon: Real-World Money • AI Security &amp; Defense • Autonomous Business</span>
+            <span>Enterprise Web3 Invoicing • AI Security &amp; Defense • Multi-Chain Intents</span>
           </div>
 
           {/* Main Title */}

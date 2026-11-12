@@ -3,29 +3,29 @@
 > **"Never send business funds to a spoofed account again. Protect AI-controlled capital with verifiable Confirmation of Payee and Treasury Guardrails."**
 
 [![NEAR Protocol](https://img.shields.io/badge/Blockchain-NEAR_Protocol-00EC97?logo=near&logoColor=black)](https://near.org)
-[![Track: Real-World Money](https://img.shields.io/badge/Track-Real--World_Money-blue?style=flat-square)](https://near.org)
-[![Track: AI Security & Defense](https://img.shields.io/badge/Track-AI_Security_%26_Defense-red?style=flat-square)](https://near.org)
-[![Track: Autonomous Business & Intents](https://img.shields.io/badge/Track-Autonomous_Business_%26_Intents-purple?style=flat-square)](https://near.org)
+[![Pillar: Corporate Settlement](https://img.shields.io/badge/Pillar-Corporate_Settlement-blue?style=flat-square)](https://near.org)
+[![Pillar: AI Security & Defense](https://img.shields.io/badge/Pillar-AI_Security_%26_Defense-red?style=flat-square)](https://near.org)
+[![Pillar: Autonomous Intents](https://img.shields.io/badge/Pillar-Autonomous_Intents-purple?style=flat-square)](https://near.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 PaySure AI is an institutional-grade, autonomous invoice management, Confirmation of Payee registry, and conversational payment platform built natively on **NEAR Protocol**. It eliminates invoice fraud, account typosquatting, and unconstrained AI spending by combining **Confirmation of Payee (on-chain named-account registry)**, **Autonomous Treasury Policy Guardrails**, **Multimodal AI OCR**, and **Natural Language Cross-Chain Intents via NEAR Chain Signatures (MPC)**.
 
-Built for the **NEAR Protocol "Build Beyond Boundaries" Hackathon ($250,000 Prize Pool)** across three core tracks:
-1. 🏦 **Real-World Money**: Bring everyday business payments on-chain — invoices, contractor payroll, remittances, and NEP-141 USDC stablecoins.
-2. 🛡️ **AI Security & Defense**: Spending limits, daily velocity caps, counterparty reputation scoring (0–100), scam/spoofing detection, and emergency killswitches.
-3. 🤖 **Autonomous Business & NEAR Intents**: Conversational multi-chain intents (*"Send $50 to John Kennedy on Base"*), auto-approval thresholds, and MPC cross-chain routing.
+Engineered across three foundational pillars:
+1. 🏦 **Corporate Money & Invoicing**: Bring everyday business payments on-chain — multimodal invoice extraction, contractor payroll, remittances, and NEP-141 USDC stablecoins.
+2. 🛡️ **AI Security & Defense**: Spending limits, daily velocity caps, OutLayer attestation, counterparty reputation scoring (0–100), scam/spoofing detection, and emergency killswitches.
+3. 🤖 **Autonomous Business & NEAR Intents**: Conversational multi-chain intents (*"Send $50 to John Kennedy on Base"*), auto-approval thresholds, and MPC cross-chain routing via NEAR Chain Signatures.
 
 ---
 
-## 🏆 Hackathon Track Alignment
+## 🏛 Core Architectural Pillars
 
-| Track ID | Track Name | Hackathon Focus | PaySure AI Implementation |
+| Pillar ID | Pillar Name | Platform Focus | PaySure AI Implementation |
 | :--- | :--- | :--- | :--- |
-| `realworld` | **Real-World Money** | Invoicing, payroll, remittances, and stablecoins. | • **Multimodal AI OCR**: Drag-and-drop PDF/image parsing.<br>• **NEP-141 USDC & NEAR**: Sub-second settlement.<br>• **Audit-Ready PDF Receipts**: Downloadable compliance receipts stamped with on-chain verification. |
+| `realworld` | **Corporate Invoicing & Settlement** | Invoicing, payroll, remittances, and stablecoins. | • **Multimodal AI OCR**: Drag-and-drop PDF/image parsing.<br>• **NEP-141 USDC & NEAR**: Sub-second settlement.<br>• **Audit-Ready PDF Receipts**: Downloadable compliance receipts stamped with on-chain verification. |
 | `security` | **AI Security & Defense** | Spending limits, wallet safeguards, scam detection. | • **OutLayer Integration**: Transaction security attestation.<br>• **Confirmation of Payee**: Eliminates typosquatting (`satosh1.near` vs `satoshi.near`).<br>• **Treasury Guardrails** (`/treasury`): Single-tx limits, 24h velocity meter, and 1-click killswitch. |
-| `business` | **Autonomous Business** | AI businesses managing procurement and treasuries. | • **Conversational Intent Resolver**: Natural language prompts.<br>• **Auto-Approval Threshold**: Instant settlement under $\le \$100$.<br>• **SputnikDAO Escalation**: High-value payments route to council multi-sig. |
-| `agents` | **Agent Economy** | Agents that earn, spend, and get hired. | • **NEAR Agent Market** (`market.near.ai`): Registered agent manifest at `/api/agent`.<br>• **MCP Server**: Model Context Protocol endpoint at `/api/agent/mcp` for Claude Desktop & swarms. |
-| `social` | **Social Money** | Shared budgets and DAO governance. | • **SputnikDAO & Trezu Multi-Sig**: Direct on-chain `add_proposal` crafting to `paysure-council.sputnik-dao.testnet`. |
+| `business` | **Autonomous Business & Intents** | AI businesses managing procurement and treasuries. | • **Conversational Intent Resolver**: Natural language prompts.<br>• **Auto-Approval Threshold**: Instant settlement under $\le \$100$.<br>• **SputnikDAO Escalation**: High-value payments route to council multi-sig. |
+| `agents` | **Agent Economy & Swarms** | Agents that earn, spend, and get hired. | • **NEAR Agent Market** (`market.near.ai`): Registered agent manifest at `/api/agent`.<br>• **MCP Server**: Model Context Protocol endpoint at `/api/agent/mcp` for Claude Desktop & swarms. |
+| `social` | **Social Money & Multisig** | Shared budgets and DAO governance. | • **SputnikDAO & Trezu Multi-Sig**: Direct on-chain `add_proposal` crafting to `paysure-council.sputnik-dao.testnet`. |
 
 ---
 
@@ -103,10 +103,11 @@ flowchart TD
   - `MISMATCH`: The account extracted from the invoice contradicts known payee data (High-Risk Fraud alert).
 
 ### 3. Autonomous Treasury Guardrails (`/treasury`)
-- **Single Transaction Ceilings**: Human-defined maximum for any single transfer.
-- **Daily Velocity Caps**: Monitors rolling 24-hour volume to prevent wallet draining.
-- **Autonomous Auto-Approval Threshold**: Payments under this threshold (e.g., $250.00 USD) with high-reputation counterparties settle autonomously without human bottleneck.
-- **Department Procurement Budgets**: Allocates discrete budgets across Engineering, Design, Marketing, and Operations.
+- **Single Transaction Ceilings**: Human-defined maximum for any single transfer ($500 USD).
+- **Daily Velocity Caps**: Monitors rolling 24-hour volume to prevent wallet draining ($2,500 USD).
+- **Autonomous Auto-Approval Threshold**: Payments under this threshold ($\le \$100$ USD) with high-reputation counterparties settle autonomously without human bottleneck.
+- **SputnikDAO / Trezu Escalation**: High-value transactions escalate to DAO council multi-sig proposals.
+- **OutLayer Agent Defense**: Attestation and prompt-injection firewalls.
 - **Emergency Killswitch**: One-click administrative pause that blocks all outbound automated disbursements.
 
 ### 4. Multimodal AI Invoice Ingestion (`/invoices/upload`)
@@ -114,39 +115,19 @@ flowchart TD
 - Automatically extracts line items, totals, invoice numbers, due dates, and payee accounts into editable drafts.
 - **Adversarial Input Defense**: Invoice data is treated as untrusted input with strict Zod validation schemas to prevent prompt-injection attacks.
 
-### 5. Compliance PDF Receipts
-- Generates audit-ready, downloadable PDF payment receipts containing transaction hashes, block timestamps, sender/payee accounts, and direct links to **NEARBlocks**.
+### 5. Multi-Wallet Selector Support
+- Seamless connection via official NEAR Wallet Selector:
+  - **MyNearWallet** (Official Web & Mobile)
+  - **HOT Wallet** (HERE Wallet / Telegram Chain Abstraction)
+  - **Meteor Wallet** (Browser Extension & Web)
+  - **Nightly Wallet** (Multi-Chain Extension & Mobile)
+  - **Sender Wallet** (Fast Non-Custodial Browser Extension)
 
 ---
 
-## 🌐 NEAR Protocol Configuration
+## 📁 Repository Structure
 
-| Parameter | Value |
-| :--- | :--- |
-| **Blockchain Network** | `NEAR Protocol (Testnet & Mainnet)` |
-| **Network ID** | `testnet` |
-| **RPC Endpoint** | `https://rpc.testnet.near.org` |
-| **Native Currency** | `NEAR` (24 Decimals) |
-| **Settlement Stablecoin** | `USDC` (NEP-141 Standard, 6 Decimals) |
-| **MPC Signer Contract** | `v1.signer-prod.testnet` |
-| **Block Explorer** | `https://testnet.nearblocks.io` |
-| **Wallet / Faucet** | `https://testnet.mynearwallet.com` |
-
----
-
-## 🛠 Tech Stack
-
-- **Frontend**: Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS, Lucide Icons, Framer Motion, canvas-confetti, jsPDF.
-- **Smart Contracts**: `near-sdk-js`, NEAR CLI, WebAssembly (`.wasm`).
-- **Chain Signatures & Web3**: NEAR Protocol, NEAR Chain Signatures (MPC), NEP-141 Token Standard, Viem.
-- **AI Engine**: Multimodal AI Agent with structured JSON parsing, prompt-injection defense, and conversational intent parser.
-- **Backend & Database**: Next.js API Routes, Prisma ORM, PostgreSQL (Prisma Postgres on Vercel).
-
----
-
-## 📂 Project Structure
-
-```
+```text
 PaysureAI/
 ├── contracts/
 │   └── near/
@@ -163,8 +144,9 @@ PaysureAI/
 │   │   ├── pay/                 # Conversational Intent Bar & Verified Settlement
 │   │   ├── history/             # Transaction history & PDF receipts
 │   │   └── api/
+│   │       ├── agent/           # Agent Market manifest & Model Context Protocol (MCP)
 │   │       ├── near/intents/    # NEAR Intent creation & resolution APIs
-│   │       ├── ai/assistant/    # Route-aware Copilot & intent routing
+│   │       ├── ai/assistant/    # Route-aware Copilot & NEAR.AI Cloud inference
 │   │       └── recipients/      # Payee verification endpoints
 │   ├── components/
 │   │   ├── assistant/           # Floating Autonomous Copilot
@@ -173,12 +155,13 @@ PaysureAI/
 │   ├── context/
 │   │   └── NearWalletContext.tsx # Native NEAR wallet connection state
 │   └── lib/
+│       ├── ai/                  # NEAR.AI Cloud client configuration
+│       ├── security/            # OutLayer agent security evaluation
 │       ├── near/                # Intent resolver & Chain Signatures MPC
-│       ├── treasury/            # Policy Engine & Reputation calculation
+│       ├── treasury/            # Policy Engine & SputnikDAO integration
 │       └── prisma.ts            # Prisma client singleton
 ├── prisma/
 │   └── schema.prisma            # Users, Recipients, Invoices, Payments, Receipts
-├── NEAR_HACKATHON_SPEC.md       # Full submission spec with 3-minute video script
 └── README.md                    # Platform documentation
 ```
 
@@ -206,7 +189,7 @@ cp .env.example .env
 Fill in your database URL and AI API key:
 ```env
 DATABASE_URL="postgres://..."
-DEEPSEEK_API_KEY="your-api-key"
+NEARAI_API_KEY="your-nearai-key"
 ```
 
 ### 4. Build & Run
@@ -223,7 +206,7 @@ Open [http://localhost:3000](http://localhost:3000) to view PaySure AI.
 
 ## 🧪 Demonstration Workflow
 
-1. **Connect NEAR Account**: Connect in the top navbar (e.g., `company.testnet` or `alice.testnet`).
+1. **Connect NEAR Account**: Connect in the top navbar (e.g. MyNearWallet, HOT, Meteor, Nightly, Sender).
 2. **Conversational Intent**: Navigate to `/pay`. Click the sample prompt: *"Send $50 to John Kennedy on Base"*.
    - Watch the AI resolve John Kennedy's legal identity, map to Base EVM address, evaluate Treasury limits, and derive the NEAR Chain Signatures MPC signer.
 3. **Treasury Guardrails Hub**: Navigate to `/treasury`. Adjust auto-approval limits, inspect rolling velocity utilization, and review vendor trust scores.
@@ -233,4 +216,4 @@ Open [http://localhost:3000](http://localhost:3000) to view PaySure AI.
 ---
 
 ## 📄 License
-MIT License. Built for the **NEAR Protocol "Build Beyond Boundaries" Hackathon**.
+MIT License. © 2026 PaySure AI. All rights reserved.

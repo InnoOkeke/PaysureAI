@@ -1,6 +1,6 @@
 /**
  * NEAR Protocol Configuration for PaySure AI
- * Targets NEAR Testnet for hackathon testing and NEAR Mainnet for production.
+ * Targets NEAR Testnet for development testing and NEAR Mainnet for production.
  */
 
 export const NEAR_NETWORK_ID = process.env.NEXT_PUBLIC_NEAR_NETWORK || "testnet";

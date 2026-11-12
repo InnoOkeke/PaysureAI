@@ -16,28 +16,28 @@ export function Features() {
       description:
         "Query on-chain identity registers before transferring a single token. Eliminates lookalike typosquatting (satosh1.near vs satoshi.near) with live 4-tier status checks (Verified, Warning, Unverified, Mismatch).",
       icon: ShieldCheck,
-      badge: "Track: AI Security",
+      badge: "AI Security & Anti-Spoofing",
     },
     {
       title: "Conversational Multi-Chain Intents",
       description:
         "Execute payments in plain English: 'Send $50 to John Kennedy on Base' or 'Pay Acme Design 75 NEAR'. Translates human prompts into verified, policy-checked cross-chain intents.",
       icon: Sparkles,
-      badge: "Track: NEAR Intents",
+      badge: "NEAR Intents Engine",
     },
     {
       title: "Autonomous Treasury Guardrails",
       description:
         "Institutional policy engine with single-tx ceilings, rolling 24-hour velocity caps, department procurement budgets, and instant emergency killswitches for AI disbursements.",
       icon: Lock,
-      badge: "Track: Autonomous Business",
+      badge: "Autonomous Governance",
     },
     {
       title: "Multimodal AI Invoicing & OCR",
       description:
         "Upload invoices in PDF, PNG, or JPG. Zero-trust prompt-injection defense extracts line items, due dates, totals, and recipient accounts into editable reconciliation drafts.",
       icon: Cpu,
-      badge: "Track: Real-World Money",
+      badge: "Corporate Invoicing",
     },
     {
       title: "NEAR Chain Signatures (MPC)",

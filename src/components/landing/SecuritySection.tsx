@@ -44,7 +44,7 @@ export function SecuritySection() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold mb-4 border border-emerald-500/20">
               <ShieldCheck className="h-4 w-4" />
-              <span>Track 2: AI Security &amp; Defense</span>
+              <span>Institutional AI Security &amp; Defense</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white leading-tight">
               Institutional Zero-Trust Architecture for AI Capital

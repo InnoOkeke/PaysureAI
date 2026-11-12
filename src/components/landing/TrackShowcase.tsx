@@ -30,17 +30,17 @@ export function TrackShowcase() {
         <div className="text-center max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 text-brand-300 text-xs font-semibold mb-3 border border-brand-500/20">
             <Sparkles className="h-4 w-4 text-brand-400" />
-            <span>NEAR Protocol "Build Beyond Boundaries" Hackathon Showcase</span>
+            <span>Enterprise Platform Architecture</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-            3 Core Hackathon Tracks. 1 Unified Solution.
+            3 Architectural Pillars. 1 Autonomous Financial Platform.
           </h2>
           <p className="mt-4 text-base sm:text-lg text-slate-300">
             Explore how PaySure AI solves real-world corporate payments, safeguards autonomous agents, and routes conversational multi-chain intents.
           </p>
         </div>
 
-        {/* Track Selection Tabs */}
+        {/* Pillar Selection Tabs */}
         <div className="mt-12 flex justify-center">
           <div className="inline-flex p-1.5 rounded-2xl bg-navy-950 border border-navy-800 shadow-xl max-w-full overflow-x-auto">
             <button
@@ -52,7 +52,7 @@ export function TrackShowcase() {
               }`}
             >
               <DollarSign className="h-4 w-4" />
-              <span>Track 1: Real-World Money</span>
+              <span>Corporate Invoicing &amp; Settlement</span>
             </button>
 
             <button
@@ -64,7 +64,7 @@ export function TrackShowcase() {
               }`}
             >
               <ShieldCheck className="h-4 w-4" />
-              <span>Track 2: AI Security &amp; Defense</span>
+              <span>AI Security &amp; Anti-Spoofing</span>
             </button>
 
             <button
@@ -76,18 +76,18 @@ export function TrackShowcase() {
               }`}
             >
               <Sparkles className="h-4 w-4" />
-              <span>Track 3: Autonomous Business &amp; Intents</span>
+              <span>Autonomous Business &amp; Intents</span>
             </button>
           </div>
         </div>
 
-        {/* Tab 1 Content: Real-World Money */}
+        {/* Pillar 1 Content: Corporate Invoicing */}
         {activeTab === "track1" && (
           <div className="mt-10 rounded-2xl bg-navy-950/80 border border-navy-800 p-6 sm:p-10 shadow-2xl animate-in fade-in duration-300">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-6 space-y-4">
                 <span className="px-3 py-1 rounded-full text-xs font-semibold bg-brand-500/10 text-brand-300 border border-brand-500/20">
-                  Track 1: Real-World Money Focus
+                  Corporate Settlement Layer
                 </span>
                 <h3 className="text-2xl font-bold text-white">
                   Corporate Invoicing, Multimodal OCR &amp; Verifiable PDF Receipts
@@ -175,13 +175,13 @@ export function TrackShowcase() {
           </div>
         )}
 
-        {/* Tab 2 Content: AI Security & Defense */}
+        {/* Pillar 2 Content: AI Security & Defense */}
         {activeTab === "track2" && (
           <div className="mt-10 rounded-2xl bg-navy-950/80 border border-navy-800 p-6 sm:p-10 shadow-2xl animate-in fade-in duration-300">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-6 space-y-4">
                 <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                  Track 2: AI Security &amp; Defense Focus
+                  Zero-Trust AI Defense Layer
                 </span>
                 <h3 className="text-2xl font-bold text-white">
                   Confirmation of Payee, Anti-Spoofing &amp; Treasury Guardrails
@@ -262,13 +262,13 @@ export function TrackShowcase() {
           </div>
         )}
 
-        {/* Tab 3 Content: Autonomous Business & NEAR Intents */}
+        {/* Pillar 3 Content: Autonomous Business & NEAR Intents */}
         {activeTab === "track3" && (
           <div className="mt-10 rounded-2xl bg-navy-950/80 border border-navy-800 p-6 sm:p-10 shadow-2xl animate-in fade-in duration-300">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
               <div className="lg:col-span-6 space-y-4">
                 <span className="px-3 py-1 rounded-full text-xs font-semibold bg-brand-accent/20 text-brand-300 border border-brand-accent/30">
-                  Track 3: Autonomous Business &amp; NEAR Intents Focus
+                  Decentralized Intent Orchestrator
                 </span>
                 <h3 className="text-2xl font-bold text-white">
                   Conversational Multi-Chain Intents &amp; Chain Signatures (MPC)
@@ -396,4 +396,3 @@ export function TrackShowcase() {
     </section>
   );
 }
-

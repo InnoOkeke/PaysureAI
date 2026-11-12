@@ -242,7 +242,8 @@ Set `BACKEND_URL="http://localhost:4000"` in the web app `.env` to proxy all `/a
 2. **Context classifier** skips database lookups for greetings and general chat.
 3. **AI orchestrator** calls NEAR.AI Cloud first, falls back to DeepSeek, validates JSON with Zod, caches responses, and writes an `AIRecommendation` audit row.
 4. **Resolver** matches payees against the Confirmation of Payee registry, applies treasury policy, and derives the settlement rail (NEAR native or Chain Signatures MPC).
-5. **Pending actions** require an explicit confirm step, enforce quote expiry, and use atomic claims to prevent double execution.
+5. **Pending actions** require an explicit confirm step, enforce quote expiry, and use atomic claims to prevent double execution. The `/pay` page prepares and confirms an approval before wallet signing, then records the transaction hash on execution.
+6. **Treasury policies** are persisted per NEAR account. Velocity is computed from the last 24 hours of settled payments, and the killswitch blocks autonomous intent resolution immediately.
 
 ### Backend endpoints
 
@@ -264,6 +265,10 @@ Set `BACKEND_URL="http://localhost:4000"` in the web app `.env` to proxy all `/a
 | `GET/POST` | `/api/agent` | Agent Market manifest and tool dispatch |
 | `GET/POST` | `/api/agent/mcp` | MCP manifest and JSON-RPC tools |
 | `GET/POST` | `/api/seed` | Seed demo counterparties and invoices |
+| `GET/POST` | `/api/treasury/policy` | Read or persist per-account treasury policy |
+| `GET` | `/api/treasury/velocity` | Rolling 24h settled volume in USD |
+| `POST` | `/api/treasury/killswitch` | Freeze or resume autonomous spending |
+| `POST` | `/api/treasury/evaluate` | Evaluate a payment against live policy and velocity |
 
 > The backend never holds wallet keys. It prepares and validates intents; the browser wallet still signs every settlement.
 

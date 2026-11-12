@@ -88,3 +88,46 @@ model Receipt {
   createdAt     DateTime @default(now())
 }
 
+model PendingAction {
+  id             String    @id @default(cuid())
+  accountId      String
+  kind           String    @default("PAYMENT")
+  payload        Json
+  quoteSnapshot  Json?
+  status         String    @default("QUOTED")
+  source         String    @default("web")
+  idempotencyKey String    @unique
+  expiresAt      DateTime
+  confirmedAt    DateTime?
+  executedAt     DateTime?
+  executionTxHash String?
+  createdAt      DateTime  @default(now())
+
+  @@index([accountId, status])
+}
+
+model AIRecommendation {
+  id               String   @id @default(cuid())
+  accountId        String?
+  context          String
+  inputHash        String
+  modelProvider    String
+  modelName        String
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  recommendation   Json
+  createdAt        DateTime @default(now())
+
+  @@index([context, inputHash])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actor     String?
+  action    String
+  details   Json
+  createdAt DateTime @default(now())
+
+  @@index([action])
+}
+

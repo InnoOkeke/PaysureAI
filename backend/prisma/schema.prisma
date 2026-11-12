@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String      @id @default(cuid())
+  walletAddress String      @unique
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  recipients    Recipient[]
+  invoices      Invoice[]
+  sentPayments  Payment[]   @relation("SenderPayments")
+}
+
+model Recipient {
+  id                 String    @id @default(cuid())
+  userId             String?
+  user               User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  displayName        String
+  walletAddress      String
+  paymentId          String    @unique
+  verificationStatus String    @default("UNVERIFIED") // VERIFIED, WARNING, UNVERIFIED, MISMATCH
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  invoices           Invoice[]
+
+  @@index([walletAddress])
+  @@index([paymentId])
+}
+
+model Invoice {
+  id               String     @id @default(cuid())
+  userId           String?
+  user             User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  invoiceNumber    String
+  recipientId      String?
+  recipient        Recipient? @relation(fields: [recipientId], references: [id], onDelete: SetNull)
+  recipientName    String
+  recipientAddress String
+  amount           Float
+  token            String     @default("NEAR")
+  dueDate          String?
+  description      String?
+  status           String     @default("PENDING") // DRAFT, PENDING, PAID, CANCELLED
+  fileUrl          String?
+  extractedJson    String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  payments         Payment[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Payment {
+  id               String   @id @default(cuid())
+  senderAddress    String
+  recipientAddress String
+  amount           Float
+  tokenAddress     String
+  transactionHash  String   @unique
+  invoiceId        String?
+  invoice          Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  invoiceReference String?
+  network          String   @default("NEAR Testnet")
+  chainId          Int      @default(0)
+  status           String   @default("SUCCESS") // PENDING, SUCCESS, FAILED
+  createdAt        DateTime @default(now())
+  receipt          Receipt?
+  senderUser       User?    @relation("SenderPayments", fields: [senderAddress], references: [walletAddress])
+
+  @@index([senderAddress])
+  @@index([recipientAddress])
+  @@index([transactionHash])
+}
+
+model Receipt {
+  id            String   @id @default(cuid())
+  paymentId     String   @unique
+  payment       Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  receiptNumber String   @unique
+  createdAt     DateTime @default(now())
+}
+
+model PendingAction {
+  id             String    @id @default(cuid())
+  accountId      String
+  kind           String    @default("PAYMENT")
+  payload        Json
+  quoteSnapshot  Json?
+  status         String    @default("QUOTED")
+  source         String    @default("web")
+  idempotencyKey String    @unique
+  expiresAt      DateTime
+  confirmedAt    DateTime?
+  executedAt     DateTime?
+  executionTxHash String?
+  createdAt      DateTime  @default(now())
+
+  @@index([accountId, status])
+}
+
+model AIRecommendation {
+  id               String   @id @default(cuid())
+  accountId        String?
+  context          String
+  inputHash        String
+  modelProvider    String
+  modelName        String
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  recommendation   Json
+  createdAt        DateTime @default(now())
+
+  @@index([context, inputHash])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actor     String?
+  action    String
+  details   Json
+  createdAt DateTime @default(now())
+
+  @@index([action])
+}
+

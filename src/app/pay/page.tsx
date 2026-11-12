@@ -51,12 +51,18 @@ export default function PayPage() {
   // Settlement states
   const [isExecuting, setIsExecuting] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+  const [pendingError, setPendingError] = useState<string | null>(null);
 
   // Conversational Intent states
   const [intentInput, setIntentInput] = useState(promptParam || "");
   const [isResolvingIntent, setIsResolvingIntent] = useState(false);
   const [resolvedIntent, setResolvedIntent] = useState<any>(null);
   const [intentError, setIntentError] = useState<string | null>(null);
+
+  const paymentBlocked =
+    verification?.status === "MISMATCH" ||
+    (resolvedIntent?.policyCheck ? !resolvedIntent.policyCheck.isAllowed : false);
 
   const sampleIntents = [
     "Send $50 to John Kennedy on Base",
@@ -123,20 +129,25 @@ export default function PayPage() {
     }
   }, [invoiceIdParam, recipientParam, promptParam]);
 
-  // Handle return callback from MyNearWallet after signing real on-chain transaction
   useEffect(() => {
-    if (txHashParam) {
-      const rec = recipientParam || "acme-design.testnet";
-      const amt = parseFloat(searchParams.get("amount") || "10");
-      setRecipient(rec);
-      setAmount(amt.toString());
-      setStep(3);
+    if (!txHashParam) return;
 
-      fetch("/api/payments", {
+    const rec = recipientParam || "acme-design.testnet";
+    const amt = parseFloat(searchParams.get("amount") || "10");
+    const payerAccount =
+      searchParams.get("payerAccount") || accountId || "my-near-wallet.testnet";
+    const pendingParam = searchParams.get("pendingActionId");
+
+    setRecipient(rec);
+    setAmount(amt.toString());
+    setStep(3);
+
+    const recordPayment = async () => {
+      const res = await fetch("/api/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          senderAddress: accountId || "my-near-wallet.testnet",
+          senderAddress: payerAccount,
           recipientAddress: rec,
           amount: amt,
           tokenAddress: "native.near",
@@ -146,31 +157,110 @@ export default function PayPage() {
           network: "NEAR Testnet",
           chainId: 0,
         }),
-      })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.payment) {
-            setReceiptData(data.payment);
-          } else {
-            setReceiptData({
-              senderAddress: accountId || "my-near-wallet.testnet",
-              recipientAddress: rec,
-              amount: amt,
-              transactionHash: txHashParam,
-              createdAt: new Date().toISOString(),
-            });
-          }
-          confetti({
-            particleCount: 120,
-            spread: 80,
-            origin: { y: 0.6 },
-          });
-        })
-        .catch(console.error);
-    }
+      });
+
+      const data = await res.json();
+      if (data.payment) {
+        setReceiptData(data.payment);
+      } else {
+        setReceiptData({
+          senderAddress: payerAccount,
+          recipientAddress: rec,
+          amount: amt,
+          transactionHash: txHashParam,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      if (pendingParam) {
+        await fetch(`/api/intents/${pendingParam}/execute`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accountId: payerAccount, txHash: txHashParam }),
+        }).catch(() => undefined);
+      }
+
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 },
+      });
+    };
+
+    recordPayment().catch(console.error);
   }, [txHashParam]);
 
-  const handlePayWithMyNearWallet = () => {
+  const prepareAndConfirmPayment = async (): Promise<string | null> => {
+    if (!accountId) {
+      throw new Error("Connect your NEAR wallet before approving this payment.");
+    }
+
+    const payload = {
+      recipient,
+      recipientAddress: recipient,
+      amount: parseFloat(amount),
+      tokenSymbol,
+      invoiceReference: invoiceReference || null,
+      invoiceId: invoiceId || null,
+      verificationStatus: verification?.status ?? "UNVERIFIED",
+      targetChain: resolvedIntent?.targetChain ?? "NEAR Protocol",
+      settlementRail: resolvedIntent?.settlementExecution?.settlementRail ?? "NEAR Native",
+      policyCheck: resolvedIntent?.policyCheck ?? null,
+    };
+
+    const prepareRes = await fetch("/api/intents/prepare", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accountId,
+        payload,
+        quoteSnapshot: resolvedIntent ?? { amount, recipient, tokenSymbol },
+        source: "web",
+      }),
+    });
+
+    if (prepareRes.status === 404) {
+      return null;
+    }
+
+    const prepared = await prepareRes.json();
+    if (!prepareRes.ok || !prepared.id) {
+      throw new Error(prepared.error || prepared.message || "Failed to prepare payment approval.");
+    }
+
+    const confirmRes = await fetch(`/api/intents/${prepared.id}/confirm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accountId }),
+    });
+    const confirmed = await confirmRes.json();
+    if (!confirmRes.ok || confirmed.status !== "CONFIRMED") {
+      throw new Error(confirmed.error || confirmed.message || "Failed to confirm payment approval.");
+    }
+
+    setPendingActionId(prepared.id);
+    return prepared.id;
+  };
+
+  const cancelPendingPayment = async (actionId: string) => {
+    if (!accountId) return;
+    await fetch(`/api/intents/${actionId}/cancel`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accountId }),
+    }).catch(() => undefined);
+  };
+
+  const executePendingPayment = async (actionId: string, txHash: string) => {
+    if (!accountId) return;
+    await fetch(`/api/intents/${actionId}/execute`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accountId, txHash }),
+    }).catch(() => undefined);
+  };
+
+  const handlePayWithMyNearWallet = async () => {
     if (!recipient || !isValidNearAccountId(recipient)) {
       alert("Please enter a valid NEAR Account ID (e.g. acme-design.testnet).");
       return;
@@ -180,16 +270,25 @@ export default function PayPage() {
       return;
     }
 
-    const currentUrl = typeof window !== "undefined" ? window.location.origin + "/pay" : "";
-    const redirectUrl = `${currentUrl}?recipient=${encodeURIComponent(recipient)}&amount=${encodeURIComponent(
-      amount
-    )}&invoiceId=${encodeURIComponent(invoiceId || "")}`;
+    setPendingError(null);
+    try {
+      const actionId = await prepareAndConfirmPayment();
+      const currentUrl = typeof window !== "undefined" ? window.location.origin + "/pay" : "";
+      const redirectUrl = `${currentUrl}?recipient=${encodeURIComponent(recipient)}&amount=${encodeURIComponent(
+        amount
+      )}&invoiceId=${encodeURIComponent(invoiceId || "")}&payerAccount=${encodeURIComponent(
+        accountId || ""
+      )}&pendingActionId=${encodeURIComponent(actionId || "")}`;
 
-    const walletUrl = `${NEAR_CONFIG.walletUrl}/send-money?recipient=${encodeURIComponent(
-      recipient
-    )}&amount=${encodeURIComponent(amount)}&redirect_url=${encodeURIComponent(redirectUrl)}`;
+      const walletUrl = `${NEAR_CONFIG.walletUrl}/send-money?recipient=${encodeURIComponent(
+        recipient
+      )}&amount=${encodeURIComponent(amount)}&redirect_url=${encodeURIComponent(redirectUrl)}`;
 
-    window.location.href = walletUrl;
+      window.location.href = walletUrl;
+    } catch (err: any) {
+      setPendingError(err.message || "Failed to prepare payment approval.");
+      alert(err.message || "Failed to prepare payment approval.");
+    }
   };
 
   const checkPayee = async (addr: string, name?: string) => {
@@ -220,6 +319,7 @@ export default function PayPage() {
       alert("Please enter a valid amount.");
       return;
     }
+    setPendingError(null);
     setStep(2);
   };
 
@@ -236,10 +336,21 @@ export default function PayPage() {
       alert("Please enter a valid amount.");
       return;
     }
+    if (paymentBlocked) {
+      setPendingError(
+        "This payment is blocked by the active treasury policy. Resolve the violations or escalate to SputnikDAO before signing."
+      );
+      return;
+    }
 
     setIsExecuting(true);
+    setPendingError(null);
+    let actionId: string | null = null;
+
     try {
+      actionId = await prepareAndConfirmPayment();
       const txHash = await sendNearPayment(recipient, amount);
+      const finalHash = txHash || `NEAR-LIVE-${Date.now()}`;
 
       const res = await fetch("/api/payments", {
         method: "POST",
@@ -249,7 +360,7 @@ export default function PayPage() {
           recipientAddress: recipient,
           amount: parseFloat(amount),
           tokenAddress: tokenSymbol === "NEAR" ? "native.near" : "usdc.fakes.testnet",
-          transactionHash: txHash || `NEAR-LIVE-${Date.now()}`,
+          transactionHash: finalHash,
           invoiceId: invoiceId || null,
           invoiceReference: invoiceReference || `INV-${Date.now().toString().slice(-4)}`,
           network: "NEAR Testnet",
@@ -258,17 +369,32 @@ export default function PayPage() {
       });
 
       const data = await res.json();
-      if (data.payment) {
-        setReceiptData(data.payment);
-        setStep(3);
-        confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.6 },
-        });
+      if (actionId) {
+        await executePendingPayment(actionId, finalHash);
       }
+
+      setReceiptData(
+        data.payment ?? {
+          senderAddress: accountId,
+          recipientAddress: recipient,
+          amount: parseFloat(amount),
+          transactionHash: finalHash,
+          invoiceReference: invoiceReference || "Direct Transfer",
+          createdAt: new Date().toISOString(),
+        }
+      );
+      setStep(3);
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 },
+      });
     } catch (err: any) {
+      if (actionId) {
+        await cancelPendingPayment(actionId);
+      }
       console.error("NEAR transaction execution error:", err);
+      setPendingError(err.message || "Failed to execute transaction with connected NEAR wallet.");
       alert(err.message || "Failed to execute transaction with connected NEAR wallet.");
     } finally {
       setIsExecuting(false);
@@ -779,6 +905,34 @@ export default function PayPage() {
             </div>
           )}
 
+          {pendingError && (
+            <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-500/40 flex items-start gap-3 text-rose-300 text-xs">
+              <AlertTriangle className="h-5 w-5 text-rose-400 shrink-0" />
+              <p className="leading-relaxed">{pendingError}</p>
+            </div>
+          )}
+
+          {resolvedIntent?.policyCheck?.violations?.length > 0 && (
+            <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 text-amber-200 text-xs space-y-1.5">
+              <p className="font-bold">Treasury policy violations</p>
+              {resolvedIntent.policyCheck.violations.map((violation: string) => (
+                <p key={violation} className="text-slate-300 leading-relaxed">
+                  • {violation}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {resolvedIntent?.velocity && (
+            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.07] flex items-center justify-between text-xs">
+              <span className="text-slate-400">Rolling 24h treasury velocity</span>
+              <span className="font-mono font-semibold text-slate-200">
+                ${resolvedIntent.velocity.spentUSD.toFixed(2)} across{" "}
+                {resolvedIntent.velocity.paymentCount} payment(s)
+              </span>
+            </div>
+          )}
+
           <div className="rounded-2xl bg-white/[0.02] border border-white/[0.07] p-5 space-y-3.5 text-xs">
             <div className="flex justify-between items-center py-1.5 border-b border-white/[0.06]">
               <span className="text-slate-400">Recipient Account ID</span>
@@ -843,13 +997,18 @@ export default function PayPage() {
                 <button
                   type="button"
                   onClick={handleExecutePayment}
-                  disabled={isExecuting}
+                  disabled={isExecuting || paymentBlocked}
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-emerald-600/25 transition-all"
                 >
                   {isExecuting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Signing Transaction...</span>
+                      <span>Preparing approval &amp; signing...</span>
+                    </>
+                  ) : paymentBlocked ? (
+                    <>
+                      <Lock className="h-4 w-4" />
+                      <span>Blocked by Treasury Policy</span>
                     </>
                   ) : (
                     <>
@@ -895,6 +1054,13 @@ export default function PayPage() {
               </span>
             </div>
 
+            {pendingActionId && (
+              <div className="flex justify-between items-center pb-2.5 border-b border-white/[0.06]">
+                <span className="text-slate-400">Approval Reference</span>
+                <span className="font-mono text-[11px] text-slate-300">{pendingActionId}</span>
+              </div>
+            )}
+
             <div className="flex justify-between items-center py-1">
               <span className="text-slate-400">Amount Paid</span>
               <span className="font-mono font-bold text-white text-sm">
@@ -937,6 +1103,9 @@ export default function PayPage() {
                 setRecipient("");
                 setVerification(null);
                 setReceiptData(null);
+                setPendingActionId(null);
+                setPendingError(null);
+                setResolvedIntent(null);
               }}
               className="w-full sm:w-auto flex-1 px-5 py-3 rounded-full bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition-all shadow-md shadow-brand-600/25"
             >

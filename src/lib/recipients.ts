@@ -5,6 +5,7 @@ export interface CounterpartyRecord {
   displayName: string;
   paymentId: string;
   walletAddress: string;
+  evmAddress?: string;
   verificationStatus: "VERIFIED" | "WARNING" | "UNVERIFIED" | "MISMATCH";
   notes?: string;
   createdAt: string;
@@ -21,6 +22,7 @@ const DEFAULT_RECIPIENTS: CounterpartyRecord[] = [
     displayName: "Acme Web3 Design Studio",
     paymentId: "acme-design",
     walletAddress: "acme-design.testnet",
+    evmAddress: "0x456569838f1d43009A91ebA4263147Afd7233483",
     verificationStatus: "VERIFIED",
     notes: "Official NEAR Ecosystem Design Partner. Verified corporate treasury.",
     createdAt: new Date().toISOString(),
@@ -30,6 +32,7 @@ const DEFAULT_RECIPIENTS: CounterpartyRecord[] = [
     displayName: "Satoshi Freelance Engineering",
     paymentId: "satoshi-dev",
     walletAddress: "satoshi-dev.testnet",
+    evmAddress: "0x1234567890123456789012345678901234567890",
     verificationStatus: "VERIFIED",
     notes: "Smart Contract auditor & Rust / NEAR systems specialist.",
     createdAt: new Date().toISOString(),
@@ -39,6 +42,7 @@ const DEFAULT_RECIPIENTS: CounterpartyRecord[] = [
     displayName: "Apex Media Agency",
     paymentId: "apex-media",
     walletAddress: "apex-media.testnet",
+    evmAddress: "0x9999999999999999999999999999999999999999",
     verificationStatus: "WARNING",
     notes: "Recent key rotation reported by payee. Exercise caution.",
     createdAt: new Date().toISOString(),
@@ -48,8 +52,9 @@ const DEFAULT_RECIPIENTS: CounterpartyRecord[] = [
     displayName: "LeProf Consulting",
     paymentId: "leprof",
     walletAddress: "leprof.testnet",
+    evmAddress: "0x71C8360f3a8b417c805F99D4133A89f07447d251",
     verificationStatus: "VERIFIED",
-    notes: "Attested corporate counterparty on NEAR Testnet.",
+    notes: "Attested corporate counterparty on NEAR Testnet and Ethereum/Base.",
     createdAt: new Date().toISOString(),
   },
 ];
@@ -158,6 +163,14 @@ export async function addCounterparty(data: {
 export async function findCounterparty(cleanAddress: string, paymentId?: string): Promise<CounterpartyRecord | null> {
   const all = await listAllRecipients();
   const normalizedAddr = cleanAddress.trim().toLowerCase();
+
+  // EVM address check
+  if (normalizedAddr.startsWith("0x")) {
+    let evmMatch = all.find((r) => r.evmAddress && r.evmAddress.toLowerCase() === normalizedAddr);
+    if (evmMatch) return evmMatch;
+    evmMatch = all.find((r) => r.walletAddress.toLowerCase() === normalizedAddr);
+    if (evmMatch) return evmMatch;
+  }
 
   // Exact address match
   let match = all.find((r) => r.walletAddress.toLowerCase() === normalizedAddr);

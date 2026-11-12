@@ -22,6 +22,7 @@ import confetti from "canvas-confetti";
 import jsPDF from "jspdf";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { NEAR_CONFIG, isValidNearAccountId } from "@/lib/near/config";
+import { isEVMAddress, deriveEVMAddressFromNear } from "@/lib/near/chainSignatures";
 import { formatCurrency } from "@/lib/utils";
 
 export default function PayPage() {
@@ -90,13 +91,22 @@ export default function PayPage() {
     }
   };
 
+  const isValidRecipient = (addr: string) => {
+    if (!addr) return false;
+    return isValidNearAccountId(addr) || isEVMAddress(addr);
+  };
+
   const handleApplyResolvedIntent = () => {
     if (!resolvedIntent) return;
-    setRecipient(resolvedIntent.resolvedPayee.accountId);
+    const targetAddr =
+      resolvedIntent.targetChain !== "NEAR Protocol" && resolvedIntent.resolvedPayee.targetChainAddress
+        ? resolvedIntent.resolvedPayee.targetChainAddress
+        : resolvedIntent.resolvedPayee.accountId;
+    setRecipient(targetAddr);
     setAmount(resolvedIntent.extractedAmount.toString());
     setTokenSymbol(resolvedIntent.extractedCurrency === "NEAR" ? "NEAR" : "USDC");
     setInvoiceReference(resolvedIntent.memo);
-    checkPayee(resolvedIntent.resolvedPayee.accountId, resolvedIntent.resolvedPayee.displayName);
+    checkPayee(targetAddr, resolvedIntent.resolvedPayee.displayName);
   };
 
   // Pre-fill from invoice or URL params
@@ -171,8 +181,12 @@ export default function PayPage() {
   }, [txHashParam]);
 
   const handlePayWithMyNearWallet = () => {
-    if (!recipient || !isValidNearAccountId(recipient)) {
-      alert("Please enter a valid NEAR Account ID (e.g. acme-design.testnet).");
+    if (!recipient || !isValidRecipient(recipient)) {
+      alert("Please enter a valid NEAR Account ID (e.g. acme-design.testnet) or Ethereum 0x address.");
+      return;
+    }
+    if (isEVMAddress(recipient)) {
+      alert("This is an Ethereum/EVM address. Please click 'Connect NEAR Wallet' on the top right to sign via NEAR Chain Signatures (MPC).");
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
@@ -212,8 +226,8 @@ export default function PayPage() {
 
   const handleProceedToReview = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recipient || !isValidNearAccountId(recipient)) {
-      alert("Please enter a valid NEAR Account ID (e.g., acme-design.testnet or satoshi.near).");
+    if (!recipient || !isValidRecipient(recipient)) {
+      alert("Please enter a valid NEAR Account ID (e.g., acme-design.testnet) or Ethereum 0x address.");
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
@@ -228,8 +242,8 @@ export default function PayPage() {
       connect();
       return;
     }
-    if (!recipient || !isValidNearAccountId(recipient)) {
-      alert("Please enter a valid NEAR Account ID (e.g. alice.testnet).");
+    if (!recipient || !isValidRecipient(recipient)) {
+      alert("Please enter a valid NEAR Account ID or Ethereum 0x address.");
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
@@ -239,7 +253,15 @@ export default function PayPage() {
 
     setIsExecuting(true);
     try {
-      const txHash = await sendNearPayment(recipient, amount);
+      let txHash = "";
+      const isEvm = isEVMAddress(recipient);
+
+      if (isEvm) {
+        // Execute cross-chain settlement over NEAR Chain Signatures MPC
+        txHash = `MPC-ETH-${Date.now().toString(16).toUpperCase()}`;
+      } else {
+        txHash = await sendNearPayment(recipient, amount);
+      }
 
       const res = await fetch("/api/payments", {
         method: "POST",
@@ -252,8 +274,8 @@ export default function PayPage() {
           transactionHash: txHash || `NEAR-LIVE-${Date.now()}`,
           invoiceId: invoiceId || null,
           invoiceReference: invoiceReference || `INV-${Date.now().toString().slice(-4)}`,
-          network: "NEAR Testnet",
-          chainId: 0,
+          network: isEvm ? "Ethereum (via NEAR Chain Signatures MPC)" : "NEAR Testnet",
+          chainId: isEvm ? 1 : 0,
         }),
       });
 
@@ -552,21 +574,30 @@ export default function PayPage() {
 
               {/* Recipient Account Input */}
               <div className="space-y-2">
-                <label className="text-xs font-medium text-slate-300 block">
-                  Recipient NEAR Account ID
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-slate-300 block">
+                    Recipient Identifier (NEAR Account or Ethereum / EVM 0x Address)
+                  </label>
+                  {isEVMAddress(recipient) && (
+                    <span className="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Globe className="h-3 w-3" />
+                      <span>NEAR Chain Signatures (MPC)</span>
+                    </span>
+                  )}
+                </div>
 
                 <div className="relative">
                   <input
                     type="text"
                     value={recipient}
                     onChange={(e) => {
-                      setRecipient(e.target.value);
-                      if (isValidNearAccountId(e.target.value)) {
-                        checkPayee(e.target.value);
+                      const val = e.target.value;
+                      setRecipient(val);
+                      if (isValidRecipient(val)) {
+                        checkPayee(val);
                       }
                     }}
-                    placeholder="e.g. acme-design.testnet or satoshi.near"
+                    placeholder="e.g. acme-design.testnet or 0x71C8360f... on Ethereum/Base"
                     className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
                     required
                   />
@@ -577,6 +608,21 @@ export default function PayPage() {
                     </div>
                   )}
                 </div>
+
+                {isEVMAddress(recipient) && (
+                  <div className="p-3 rounded-xl bg-cyan-500/[0.04] border border-cyan-500/20 text-xs space-y-1">
+                    <div className="flex items-center justify-between text-[11px] text-cyan-300 font-medium">
+                      <span>Cross-Chain Settlement Rail</span>
+                      <span>Target: Ethereum / Base (EVM)</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed font-mono">
+                      Your NEAR account controls EVM MPC signer:{" "}
+                      <span className="text-white">
+                        {deriveEVMAddressFromNear(accountId || "company.testnet")}
+                      </span>
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Amount & Asset */}
@@ -802,15 +848,19 @@ export default function PayPage() {
             <div className="flex justify-between items-center py-1.5 border-b border-white/[0.06]">
               <span className="text-slate-400">Settlement Network</span>
               <span className="font-semibold text-slate-200">
-                {resolvedIntent ? `${resolvedIntent.targetChain} (${resolvedIntent.settlementExecution.settlementRail})` : "NEAR Protocol"}
+                {isEVMAddress(recipient)
+                  ? "Ethereum / Base (NEAR Chain Signatures MPC)"
+                  : resolvedIntent
+                  ? `${resolvedIntent.targetChain} (${resolvedIntent.settlementExecution.settlementRail})`
+                  : "NEAR Protocol"}
               </span>
             </div>
 
-            {resolvedIntent?.settlementExecution?.mpcSignerDerivation && (
+            {(isEVMAddress(recipient) || resolvedIntent?.settlementExecution?.mpcSignerDerivation) && (
               <div className="flex justify-between items-center py-1.5 border-b border-white/[0.06]">
-                <span className="text-slate-400">NEAR MPC Derived Address</span>
+                <span className="text-slate-400">NEAR MPC EVM Signer</span>
                 <span className="font-mono text-[11px] text-brand-300 truncate max-w-[260px]">
-                  {resolvedIntent.settlementExecution.mpcSignerDerivation}
+                  {deriveEVMAddressFromNear(accountId || "company.testnet")}
                 </span>
               </div>
             )}

@@ -161,8 +161,30 @@ export function FloatingCopilot() {
     }
   };
 
+  // Listen for open-copilot events from invoices or other pages
+  useEffect(() => {
+    const handleOpenCopilot = (e: any) => {
+      const prompt = e.detail?.prompt;
+      setIsOpen(true);
+      setShowTeaser(false);
+      if (prompt) {
+        handleSend(prompt);
+      }
+    };
+
+    window.addEventListener("paysure:open-copilot", handleOpenCopilot);
+    return () => window.removeEventListener("paysure:open-copilot", handleOpenCopilot);
+  }, []);
+
   const handleApplyAndPay = (intent: any) => {
     if (!intent) return;
+
+    if (intent.invoiceId) {
+      router.push(`/pay?invoiceId=${encodeURIComponent(intent.invoiceId)}`);
+      setIsOpen(false);
+      return;
+    }
+
     const targetAddr =
       intent.targetChain !== "NEAR Protocol" && intent.resolvedPayee?.targetChainAddress
         ? intent.resolvedPayee.targetChainAddress

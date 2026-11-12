@@ -12,7 +12,8 @@ import {
   Loader2, 
   FileText,
   RefreshCw,
-  Coins
+  Coins,
+  Bot
 } from "lucide-react";
 import Link from "next/link";
 import { formatAddress, formatCurrency } from "@/lib/utils";
@@ -152,6 +153,48 @@ ATTENTION: Notice account address change!`;
       }
     } catch (err) {
       console.error("Save invoice error:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePayWithCopilotAfterSave = async () => {
+    if (!invoiceNumber || !recipientName || !recipientAddress || !amount) {
+      alert("Please ensure all mandatory fields are completed.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          invoiceNumber,
+          recipientName,
+          recipientAddress,
+          amount: parseFloat(amount),
+          dueDate,
+          description,
+          extractedJson: extractedData,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.invoice) {
+        window.dispatchEvent(
+          new CustomEvent("paysure:open-copilot", {
+            detail: {
+              prompt: `Pay invoice ${invoiceNumber} for ${amount} NEAR to ${recipientName}`,
+            },
+          })
+        );
+      } else {
+        alert(data.error || "Failed to save invoice.");
+      }
+    } catch (err) {
+      console.error("Save invoice error:", err);
+      alert("Error saving invoice for Copilot payment.");
     } finally {
       setSaving(false);
     }
@@ -411,14 +454,23 @@ ATTENTION: Notice account address change!`;
                 Clear & Upload Another
               </button>
 
-              <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => handleSaveInvoice(false)}
                   disabled={saving}
                   className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-750 text-slate-200 text-xs font-semibold border border-navy-700 transition-colors"
                 >
-                  Save as Draft
+                  Save Draft
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePayWithCopilotAfterSave}
+                  disabled={saving}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-750 text-brand-300 hover:text-white border border-brand-500/30 text-xs font-semibold shadow-md transition-all"
+                >
+                  <Bot className="h-4 w-4 text-brand-400" />
+                  <span>Pay with AI Copilot</span>
                 </button>
                 <button
                   type="button"
@@ -426,7 +478,7 @@ ATTENTION: Notice account address change!`;
                   disabled={saving}
                   className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-600/30 transition-all"
                 >
-                  <span>{saving ? "Saving..." : "Confirm & Proceed to Payment"}</span>
+                  <span>{saving ? "Saving..." : "Proceed to Payment"}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>

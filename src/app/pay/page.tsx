@@ -48,7 +48,7 @@ export default function PayPage() {
   const memoParam = searchParams.get("memo");
   const txHashParam = searchParams.get("transactionHashes");
 
-  const { accountId, isConnected, balance, connect, sendNearPayment, sendChainSignaturePayment } = useNearWallet();
+  const { accountId, isConnected, balance, connect, sendNearPayment, sendChainSignaturePayment, refreshBalance } = useNearWallet();
 
   // Workflow states
   const [recipient, setRecipient] = useState(recipientParam || "");
@@ -513,6 +513,11 @@ export default function PayPage() {
         }
       );
       setStep(3);
+      if (refreshBalance) {
+        refreshBalance();
+        setTimeout(refreshBalance, 1200);
+        setTimeout(refreshBalance, 3000);
+      }
       confetti({
         particleCount: 120,
         spread: 80,

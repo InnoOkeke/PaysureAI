@@ -175,8 +175,16 @@ export function Navbar() {
                     <span className="font-mono text-xs font-medium text-slate-200 truncate max-w-[120px] sm:max-w-[150px]">
                       {accountId}
                     </span>
-                    <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full bg-white/[0.06] border border-white/[0.06] font-mono text-[11px] font-semibold text-brand-300">
-                      {balance} NEAR
+                    <span 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        refreshBalance();
+                      }}
+                      title="Click to refresh live balance"
+                      className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.06] font-mono text-[11px] font-semibold text-brand-300 transition-colors cursor-pointer group"
+                    >
+                      <span>{balance} NEAR</span>
+                      <RotateCw className={`h-2.5 w-2.5 text-slate-400 group-hover:text-brand-300 transition-all ${isFetchingBalance ? "animate-spin text-brand-400" : ""}`} />
                     </span>
                     <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-150 ${dropdownOpen ? "rotate-180" : ""}`} />
                   </button>

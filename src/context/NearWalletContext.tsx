@@ -13,6 +13,14 @@ import { utils } from "near-api-js";
 import { keccak256, toHex } from "viem";
 import { NEAR_CONFIG } from "@/lib/near/config";
 
+// Resilient NEAR Testnet RPC endpoints to prevent stale cached queries and rate-limiting
+const TESTNET_RPC_ENDPOINTS = [
+  NEAR_CONFIG.nodeUrl,
+  "https://testnet.neardata.xyz/v1/node",
+  "https://rpc.testnet.fastnear.com",
+  "https://rpc.testnet.near.org",
+];
+
 interface NearWalletContextType {
   selector: WalletSelector | null;
   modal: WalletSelectorModal | null;
@@ -113,37 +121,88 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
   const refreshBalance = useCallback(async () => {
     if (!accountId) return;
     setIsFetchingBalance(true);
-    try {
-      const res = await fetch(NEAR_CONFIG.nodeUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: "live-near-balance",
-          method: "query",
-          params: {
-            request_type: "view_account",
-            finality: "final",
-            account_id: accountId,
-          },
-        }),
-      });
-      const data = await res.json();
-      if (data.result?.amount) {
-        const formatted = parseFloat(utils.format.formatNearAmount(data.result.amount)).toFixed(2);
-        setBalance(formatted);
+
+    let updated = false;
+
+    for (const rpcUrl of TESTNET_RPC_ENDPOINTS) {
+      if (!rpcUrl) continue;
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+        const res = await fetch(rpcUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: `live-balance-${Date.now()}`,
+            method: "query",
+            params: {
+              request_type: "view_account",
+              finality: "optimistic",
+              account_id: accountId,
+            },
+          }),
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (data.result?.amount) {
+          const totalYocto = BigInt(data.result.amount);
+          // Account storage reserve (10^19 yoctoNEAR per byte stored on chain)
+          const storageYocto = BigInt(data.result.storage_usage || 0) * BigInt("10000000000000000000");
+          // Spendable available balance (matching MyNearWallet & Meteor spendable amount)
+          const availableYocto = totalYocto > storageYocto ? totalYocto - storageYocto : totalYocto;
+
+          const nearStr = utils.format.formatNearAmount(availableYocto.toString(), 4);
+          const parsed = parseFloat(nearStr);
+          const formatted = isNaN(parsed) ? "0.00" : parsed.toFixed(2);
+          setBalance(formatted);
+          updated = true;
+          break;
+        }
+      } catch (err) {
+        // Fallback to next RPC node
       }
-    } catch (err) {
-      console.error("Live balance fetch error:", err);
-    } finally {
-      setIsFetchingBalance(false);
     }
+
+    setIsFetchingBalance(false);
   }, [accountId]);
 
+  // Comprehensive multi-trigger balance sync: initial mount, periodic 8s polling, window focus, tab visibility
   useEffect(() => {
-    if (accountId) {
+    if (!accountId) return;
+
+    // 1. Initial immediate fetch
+    refreshBalance();
+
+    // 2. Continuous 8-second polling
+    const intervalId = setInterval(() => {
       refreshBalance();
-    }
+    }, 8000);
+
+    // 3. User switches back to PaySure tab or refocuses window
+    const handleFocus = () => {
+      refreshBalance();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshBalance();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [accountId, refreshBalance]);
 
   const connect = useCallback(() => {
@@ -188,7 +247,9 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
           "";
       }
 
-      await refreshBalance();
+      refreshBalance();
+      setTimeout(refreshBalance, 1200);
+      setTimeout(refreshBalance, 3000);
       return txHash;
     },
     [selector, refreshBalance]
@@ -233,7 +294,9 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
             (outcome as any).transaction_outcome?.id ||
             "";
         }
-        await refreshBalance();
+        refreshBalance();
+        setTimeout(refreshBalance, 1200);
+        setTimeout(refreshBalance, 3000);
         return txHash;
       } catch (err: any) {
         console.warn("MPC sign functionCall error, attempting transfer fallback:", err);
@@ -252,7 +315,9 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
             (outcome as any).transaction_outcome?.id ||
             "";
         }
-        await refreshBalance();
+        refreshBalance();
+        setTimeout(refreshBalance, 1200);
+        setTimeout(refreshBalance, 3000);
         return txHash;
       }
     },

@@ -13,12 +13,11 @@ import { utils } from "near-api-js";
 import { keccak256, toHex } from "viem";
 import { NEAR_CONFIG } from "@/lib/near/config";
 
-// Resilient NEAR Testnet RPC endpoints to prevent stale cached queries and rate-limiting
+// Resilient NEAR Testnet RPC endpoints using FastNEAR (recommended by NEAR Protocol)
 const TESTNET_RPC_ENDPOINTS = [
-  NEAR_CONFIG.nodeUrl,
-  "https://testnet.neardata.xyz/v1/node",
   "https://rpc.testnet.fastnear.com",
-  "https://rpc.testnet.near.org",
+  "https://test.rpc.fastnear.com",
+  NEAR_CONFIG.nodeUrl,
 ];
 
 interface NearWalletContextType {
@@ -159,7 +158,12 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
 
           const nearStr = utils.format.formatNearAmount(availableYocto.toString(), 4);
           const parsed = parseFloat(nearStr);
-          const formatted = isNaN(parsed) ? "0.00" : parsed.toFixed(2);
+          // Truncate to 3 decimal places without rounding up (e.g. 1.895 NEAR instead of rounding to 1.90)
+          let formatted = "0.00";
+          if (!isNaN(parsed) && parsed > 0) {
+            const floor3 = Math.floor(parsed * 1000) / 1000;
+            formatted = floor3.toFixed(3);
+          }
           setBalance(formatted);
           updated = true;
           break;

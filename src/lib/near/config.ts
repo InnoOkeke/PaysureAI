@@ -7,7 +7,7 @@ export const NEAR_NETWORK_ID = process.env.NEXT_PUBLIC_NEAR_NETWORK || "testnet"
 
 export const NEAR_CONFIG = {
   networkId: NEAR_NETWORK_ID,
-  nodeUrl: process.env.NEXT_PUBLIC_NEAR_RPC_URL || "https://rpc.testnet.near.org",
+  nodeUrl: process.env.NEXT_PUBLIC_NEAR_RPC_URL || "https://rpc.testnet.fastnear.com",
   archivalUrl: "https://archival-rpc.testnet.near.org",
   walletUrl: "https://testnet.mynearwallet.com",
   helperUrl: "https://helper.testnet.near.org",

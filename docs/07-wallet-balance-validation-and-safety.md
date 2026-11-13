@@ -75,3 +75,4 @@ PaySure AI operates strictly under a **zero-trust, non-custodial custody model**
 2. **Client-Side Payload Assembly**: All transaction payloads (whether native NEAR or Model A cross-chain intents) are assembled in the browser memory.
 3. **Hardware & Wallet Isolation**: Cryptographic signatures are authorized exclusively through external, user-controlled wallets (MyNearWallet, Meteor, Ledger, or Trezor).
 4. **Verifiable Auditability**: Every transaction receipt records the NEAR block height, transaction hash, and timestamp, linking directly to public explorers for permanent regulatory verification.
+

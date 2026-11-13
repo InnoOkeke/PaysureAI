@@ -63,3 +63,4 @@ PaySure AI operates as a non-custodial financial layer that connects corporate f
 1. **Strict Non-Custodial Design**: PaySure never stores, handles, or transmits private keys or seed phrases. Every transaction payload is built in-browser and handed off to user-controlled wallets (such as MyNearWallet or Meteor) for cryptographic approval.
 2. **Pre-Flight Attestation**: No capital is released until Confirmation of Payee verifies the beneficiary identity and the Treasury Policy Engine approves the spending velocity.
 3. **Chain Abstraction First**: Counterparties receive funds in their native token on their preferred blockchain (e.g. STX on Stacks, SOL on Solana, BTC on Bitcoin, or ETH on Base) while the sender maintains a single treasury on NEAR Protocol.
+

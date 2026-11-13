@@ -92,3 +92,4 @@ Users can command the Copilot to settle invoices in plain language:
 The Copilot communicates seamlessly across pages using native window events:
 - **`paysure:open-copilot`**: Dispatched by the invoice directory or upload screen to pop open the dock and immediately send a prompt (e.g. *"Pay invoice INV-2026-9042"*).
 - **`paysure:apply-intent`**: Dispatched by the Copilot to the `/pay` page to immediately populate the transfer parameters without triggering a full page reload.
+

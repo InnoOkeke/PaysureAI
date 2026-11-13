@@ -85,7 +85,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if the user is expressing a conversational payment intent
+    const hasExplicitAddress = 
+      /0x[a-fA-F0-9]{40}/.test(message) ||
+      /[a-zA-Z0-9_\-\.]+\.(testnet|near)/i.test(message) ||
+      /\b(bc1|[13]|tb1)[a-zA-HJ-NP-Z0-9]{25,62}\b/.test(message) ||
+      /\bS[PT][a-zA-Z0-9]{28,42}\b/.test(message);
+
     const isPaymentIntent = 
+      hasExplicitAddress ||
       /^(send|pay|transfer|disburse|bridge)\b/i.test(lower) ||
       /\b(send|pay|transfer|disburse)\s+(\$?\d+|\d+\s*(near|usdc|eth|btc|stx|sol|xrp|atom|xlm)?)/i.test(lower) ||
       /\b(on\s+(base|ethereum|eth|arbitrum|solana|stacks|bitcoin|btc|ripple|xrp|cosmos|stellar|near))\b/i.test(lower) ||
@@ -105,7 +112,8 @@ export async function POST(req: NextRequest) {
       lower.includes("on eth");
 
     if (isPaymentIntent) {
-      const intent = resolveNaturalLanguageIntent(message, "company.near");
+      const dbRecipients = await prisma.recipient.findMany().catch(() => []);
+      const intent = resolveNaturalLanguageIntent(message, "company.near", dbRecipients);
       const policyMsg = intent.policyCheck.autoExecutable
         ? "✓ Autonomous Treasury Approval: Payment is within policy threshold ($250 USD) and daily velocity limits."
         : `⚠ Security Policy Alert: ${intent.policyCheck.violations.join(", ") || "Requires Human Signoff"}`;
@@ -117,7 +125,7 @@ export async function POST(req: NextRequest) {
         `• **Destination Address**: \`${intent.resolvedPayee.targetChainAddress}\`\n` +
         `• **Confirmation of Payee**: ${intent.resolvedPayee.verificationStatus} (Trust Score: ${intent.resolvedPayee.reputationScore}/100)\n` +
         `• **Treasury Guardrail**: ${policyMsg}\n\n` +
-        `Click **Apply & Pay Now** below to authorize this payment directly from your NEAR wallet.`;
+        `Click **Sign & Pay in Chat** below to authorize this payment directly from your NEAR wallet.`;
 
       return NextResponse.json({ reply, intent, provider: AI_PROVIDER_NAME });
     }

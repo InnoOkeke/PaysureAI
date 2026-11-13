@@ -112,3 +112,4 @@ Once the compiler produces a `ResolvedIntent`, the UI provides an instant **"App
 4. Populates the memo with the context reference.
 5. Displays the live Confirmation of Payee verification badge.
 6. Enforces real-time wallet balance validation before the user signs.
+

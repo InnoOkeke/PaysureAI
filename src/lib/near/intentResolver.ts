@@ -7,6 +7,7 @@
 
 import { evaluatePaymentAgainstPolicy, calculateReputationScore, DEFAULT_TREASURY_POLICY } from "@/lib/treasury/policyEngine";
 import { deriveEVMAddressFromNear } from "@/lib/near/chainSignatures";
+import { detectChainFromAddress } from "@/lib/recipients";
 
 export interface ResolvedIntent {
   rawPrompt: string;
@@ -106,10 +107,31 @@ const DIRECTORY_COUNTERPARTIES = [
  */
 export function resolveNaturalLanguageIntent(
   prompt: string,
-  senderNearAccount: string = "company.near"
+  senderNearAccount: string = "company.near",
+  customRecipients?: any[]
 ): ResolvedIntent {
   const clean = prompt.trim();
   const lower = clean.toLowerCase();
+
+  // Combine built-in directory with any database recipients
+  const allCounterparties = [
+    ...DIRECTORY_COUNTERPARTIES,
+    ...(customRecipients || []).map((r) => ({
+      displayName: r.displayName || r.name,
+      paymentId: r.paymentId || (r.displayName || "").toLowerCase().replace(/\s+/g, "-"),
+      nearAccountId: r.walletAddress || r.nearAccountId || `${(r.displayName || "").toLowerCase().replace(/\s+/g, "-")}.testnet`,
+      evmAddress: r.evmAddress,
+      bitcoinAddress: r.bitcoinAddress,
+      solanaAddress: r.solanaAddress,
+      xrpAddress: r.xrpAddress,
+      cosmosAddress: r.cosmosAddress,
+      stacksAddress: r.stacksAddress,
+      stellarAddress: r.stellarAddress,
+      verificationStatus: (r.verificationStatus || "VERIFIED") as any,
+      isOfficialPartner: Boolean(r.isOfficialPartner),
+      transactionCount: r.transactionCount || 6,
+    })),
+  ];
 
   // 1. Extract Amount & Currency
   let extractedAmount = 50;
@@ -125,23 +147,64 @@ export function resolveNaturalLanguageIntent(
     }
   }
 
-  // 2. Extract Destination Chain
+  // 2. Check for Literal / Explicit On-Chain Addresses in the Prompt
+  // Handles EVM, NEAR (*.testnet, *.near), Bitcoin (bc1/1/3/tb1), Stacks (SP/ST), Solana, Cosmos, Ripple, Stellar
+  let explicitAddress: string | null = null;
+  const words = clean.split(/[\s,]+/);
+
+  for (const word of words) {
+    const w = word.trim().replace(/[(),;:]/g, "");
+    if (/^0x[a-fA-F0-9]{40}$/.test(w)) {
+      explicitAddress = w;
+      break;
+    }
+    if (/^[a-zA-Z0-9_\-\.]+\.(testnet|near)$/i.test(w)) {
+      explicitAddress = w.toLowerCase();
+      break;
+    }
+    if (/^(bc1|[13]|tb1)[a-zA-HJ-NP-Z0-9]{25,62}$/.test(w)) {
+      explicitAddress = w;
+      break;
+    }
+    if (/^S[PT][a-zA-Z0-9]{28,42}$/.test(w)) {
+      explicitAddress = w;
+      break;
+    }
+    if (/^cosmos1[a-z0-9]{38,45}$/.test(w)) {
+      explicitAddress = w;
+      break;
+    }
+    if (/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(w)) {
+      explicitAddress = w;
+      break;
+    }
+    if (/^G[A-Z2-7]{55}$/.test(w)) {
+      explicitAddress = w;
+      break;
+    }
+    if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(w) && !w.includes(".") && !["bitcoin", "ethereum", "arbitrum", "protocol", "lightning"].includes(w.toLowerCase())) {
+      explicitAddress = w;
+      break;
+    }
+  }
+
+  // 3. Extract Destination Chain & Rail
   let targetChain = "NEAR Protocol";
   let settlementRail: "NEAR Native" | "NEAR Chain Signatures (MPC)" | "NEAR Intent Solver (Model A)" = "NEAR Native";
 
   if (lower.includes("on base") || lower.includes("to base")) {
     targetChain = "Base";
     settlementRail = "NEAR Intent Solver (Model A)";
-  } else if (lower.includes("on ethereum") || lower.includes("on eth")) {
+  } else if (lower.includes("on ethereum") || lower.includes("on eth") || lower.includes("to eth")) {
     targetChain = "Ethereum";
     settlementRail = "NEAR Chain Signatures (MPC)";
-  } else if (lower.includes("on arbitrum")) {
+  } else if (lower.includes("on arbitrum") || lower.includes("to arbitrum")) {
     targetChain = "Arbitrum";
     settlementRail = "NEAR Intent Solver (Model A)";
   } else if (lower.includes("on solana") || lower.includes("to solana")) {
     targetChain = "Solana";
     settlementRail = "NEAR Intent Solver (Model A)";
-  } else if (lower.includes("on bitcoin") || lower.includes("to bitcoin") || lower.includes("on btc")) {
+  } else if (lower.includes("on bitcoin") || lower.includes("to bitcoin") || lower.includes("on btc") || lower.includes("to btc")) {
     targetChain = "Bitcoin";
     settlementRail = "NEAR Chain Signatures (MPC)";
   } else if (lower.includes("on xrp") || lower.includes("on ripple") || lower.includes("to ripple")) {
@@ -156,54 +219,105 @@ export function resolveNaturalLanguageIntent(
   } else if (lower.includes("on stellar") || lower.includes("to stellar")) {
     targetChain = "Stellar";
     settlementRail = "NEAR Intent Solver (Model A)";
+  } else if (explicitAddress) {
+    // If user provided a raw address without mentioning chain, auto-infer chain
+    const detected = detectChainFromAddress(explicitAddress);
+    targetChain = detected.chain.includes("Base") ? "Base" : detected.chain;
+    settlementRail = detected.rail;
   }
 
-  // 3. Extract Recipient Query
-  let recipientQuery = "LeProf Consulting";
-  if (lower.includes("leprof")) {
-    recipientQuery = "LeProf Consulting";
-  } else if (lower.includes("acme")) {
-    recipientQuery = "Acme Web3 Design Studio";
-  } else if (lower.includes("satoshi")) {
-    recipientQuery = "Satoshi Freelance Engineering";
-  } else if (lower.includes("john") || lower.includes("kennedy")) {
-    recipientQuery = "John Kennedy";
+  // 4. Resolve Payee & Address
+  let recipientQuery = "";
+  let targetChainAddress = "";
+  let matchedCounterparty: any = null;
+
+  if (explicitAddress) {
+    // The user provided the exact address directly
+    targetChainAddress = explicitAddress;
+    
+    // Check if this explicit address belongs to any registered counterparty in directory
+    matchedCounterparty = allCounterparties.find((c) =>
+      c.nearAccountId?.toLowerCase() === explicitAddress!.toLowerCase() ||
+      c.evmAddress?.toLowerCase() === explicitAddress!.toLowerCase() ||
+      c.bitcoinAddress === explicitAddress ||
+      c.solanaAddress === explicitAddress ||
+      c.stacksAddress === explicitAddress ||
+      c.xrpAddress === explicitAddress ||
+      c.cosmosAddress === explicitAddress ||
+      c.stellarAddress === explicitAddress
+    );
+
+    if (matchedCounterparty) {
+      recipientQuery = matchedCounterparty.displayName;
+    } else {
+      recipientQuery = explicitAddress.length > 18 
+        ? `${explicitAddress.slice(0, 6)}...${explicitAddress.slice(-4)}`
+        : explicitAddress;
+    }
   } else {
-    // Try to match "to [Name/Account]" or "pay [Name/Account]"
-    const toMatch = clean.match(/(?:to|pay)\s+([a-zA-Z0-9-_\.]+)/i);
-    if (toMatch) {
-      recipientQuery = toMatch[1];
+    // Extract recipient name / identifier from query
+    if (lower.includes("leprof")) {
+      recipientQuery = "LeProf Consulting";
+    } else if (lower.includes("acme")) {
+      recipientQuery = "Acme Web3 Design Studio";
+    } else if (lower.includes("satoshi")) {
+      recipientQuery = "Satoshi Freelance Engineering";
+    } else if (lower.includes("john") || lower.includes("kennedy")) {
+      recipientQuery = "John Kennedy";
+    } else {
+      // Find matches in registered counterparties
+      for (const cp of allCounterparties) {
+        if (lower.includes(cp.displayName.toLowerCase()) || lower.includes(cp.paymentId.toLowerCase())) {
+          recipientQuery = cp.displayName;
+          break;
+        }
+      }
+
+      if (!recipientQuery) {
+        // Match "to <name>" or "for <name>"
+        const toMatch = clean.match(/(?:to|for)\s+([a-zA-Z0-9_\-\.]+)/i);
+        if (toMatch && !["base", "stacks", "solana", "bitcoin", "ethereum", "eth", "xrp", "cosmos", "stellar", "near"].includes(toMatch[1].toLowerCase())) {
+          recipientQuery = toMatch[1];
+        } else {
+          recipientQuery = "LeProf Consulting"; // safe default
+        }
+      }
+    }
+
+    matchedCounterparty = allCounterparties.find(
+      (c) =>
+        c.displayName.toLowerCase().includes(recipientQuery.toLowerCase()) ||
+        c.paymentId.toLowerCase().includes(recipientQuery.toLowerCase()) ||
+        c.nearAccountId.toLowerCase().includes(recipientQuery.toLowerCase())
+    );
+
+    // Resolve target address according to the selected destination chain
+    if (targetChain === "Base" || targetChain === "Ethereum" || targetChain === "Arbitrum") {
+      targetChainAddress = matchedCounterparty?.evmAddress || "0x71C8360f3a8b417c805F99D4133A89f07447d251";
+    } else if (targetChain === "Bitcoin") {
+      targetChainAddress = matchedCounterparty?.bitcoinAddress || "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4";
+    } else if (targetChain === "Solana") {
+      targetChainAddress = matchedCounterparty?.solanaAddress || "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU";
+    } else if (targetChain === "Ripple (XRP)") {
+      targetChainAddress = matchedCounterparty?.xrpAddress || "r9cZA1mLK5R5Am25ArfXFmqgNwjZgnfk59";
+    } else if (targetChain === "Cosmos") {
+      targetChainAddress = matchedCounterparty?.cosmosAddress || "cosmos1hsk6jryyqjfhp5dhc55tc9jtckygx0e846pc54";
+    } else if (targetChain === "Stacks (Bitcoin L2)") {
+      targetChainAddress = matchedCounterparty?.stacksAddress || "SP1P72Z3704VMT3DMHPP2CB8TGQWGDBHD3RPR9GZS";
+    } else if (targetChain === "Stellar") {
+      targetChainAddress = matchedCounterparty?.stellarAddress || "GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37";
+    } else {
+      targetChainAddress = matchedCounterparty?.nearAccountId || (recipientQuery.includes(".") ? recipientQuery : `${recipientQuery.toLowerCase()}.testnet`);
     }
   }
 
-  // 4. Resolve Counterparty from Confirmation of Payee
-  const matched = DIRECTORY_COUNTERPARTIES.find(
-    (c) =>
-      c.displayName.toLowerCase().includes(recipientQuery.toLowerCase()) ||
-      c.paymentId.toLowerCase().includes(recipientQuery.toLowerCase()) ||
-      c.nearAccountId.toLowerCase().includes(recipientQuery.toLowerCase())
-  );
+  const verificationStatus: "VERIFIED" | "WARNING" | "UNVERIFIED" | "MISMATCH" = matchedCounterparty 
+    ? matchedCounterparty.verificationStatus 
+    : (explicitAddress && (explicitAddress.endsWith(".testnet") || explicitAddress.endsWith(".near")) ? "WARNING" : "UNVERIFIED");
 
-  const verificationStatus = matched ? matched.verificationStatus : "UNVERIFIED";
-  const reputationScore = matched ? calculateReputationScore(matched) : 35;
-
-  // Resolve target address according to the selected destination chain
-  let targetChainAddress = matched?.nearAccountId || `${recipientQuery.toLowerCase()}.testnet`;
-  if (targetChain === "Base" || targetChain === "Ethereum" || targetChain === "Arbitrum") {
-    targetChainAddress = matched?.evmAddress || "0x71C8360f3a8b417c805F99D4133A89f07447d251";
-  } else if (targetChain === "Bitcoin") {
-    targetChainAddress = matched?.bitcoinAddress || "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4";
-  } else if (targetChain === "Solana") {
-    targetChainAddress = matched?.solanaAddress || "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU";
-  } else if (targetChain === "Ripple (XRP)") {
-    targetChainAddress = matched?.xrpAddress || "r9cZA1mLK5R5Am25ArfXFmqgNwjZgnfk59";
-  } else if (targetChain === "Cosmos") {
-    targetChainAddress = matched?.cosmosAddress || "cosmos1hsk6jryyqjfhp5dhc55tc9jtckygx0e846pc54";
-  } else if (targetChain === "Stacks (Bitcoin L2)") {
-    targetChainAddress = matched?.stacksAddress || "SP1P72Z3704VMT3DMHPP2CB8TGQWGDBHD3RPR9GZS";
-  } else if (targetChain === "Stellar") {
-    targetChainAddress = matched?.stellarAddress || "GDQP2KPQGKIHYJGXNUIYOMHARUARCA7DJT5FO2FFOOKY3B2WSQHG4W37";
-  }
+  const reputationScore = matchedCounterparty 
+    ? calculateReputationScore(matchedCounterparty) 
+    : (verificationStatus === "WARNING" ? 65 : 40);
 
   // 5. Evaluate against Treasury Policy Engine
   const policyCheck = evaluatePaymentAgainstPolicy(
@@ -219,12 +333,12 @@ export function resolveNaturalLanguageIntent(
     rawPrompt: prompt,
     extractedAmount,
     extractedCurrency,
-    recipientQuery,
+    recipientQuery: recipientQuery || "Recipient",
     targetChain,
     memo: `Cross-Chain Settlement: ${prompt}`,
     resolvedPayee: {
-      displayName: matched?.displayName || recipientQuery,
-      accountId: matched?.nearAccountId || `${recipientQuery.toLowerCase()}.testnet`,
+      displayName: matchedCounterparty?.displayName || recipientQuery,
+      accountId: matchedCounterparty?.nearAccountId || (targetChainAddress.includes(".") ? targetChainAddress : "leprof.testnet"),
       targetChainAddress,
       verificationStatus,
       reputationScore,

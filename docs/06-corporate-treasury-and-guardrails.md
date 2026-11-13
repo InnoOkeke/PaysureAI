@@ -83,3 +83,4 @@ When a proposed payment exceeds the autonomous ceiling (e.g. an institutional tr
 2. **Proposal Submission**: An on-chain proposal is published to the organization's **SputnikDAO contract** (`paysure-council.sputnik-dao.testnet`).
 3. **Multi-Stakeholder Sign-Off**: Treasury officers must log into their respective DAO voting interfaces (or Trezu multi-sig dashboard) to review the CoP attestation and cast their approval votes.
 4. **Execution Release**: Once the threshold voting quorum ($M$-of-$N$) is satisfied on NEAR, the smart contract releases the funds to the beneficiary or cross-chain solver rail.
+

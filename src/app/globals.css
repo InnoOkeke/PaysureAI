@@ -3,63 +3,151 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 225 38% 3%;
-    --foreground: 210 20% 98%;
+  :root,
+  html.dark {
+    color-scheme: dark;
 
-    --card: 225 32% 5%;
-    --card-foreground: 210 20% 98%;
+    /* Semantic Surfaces (RGB channels for alpha support) */
+    --surface-canvas: 5 7 11;       /* #05070B */
+    --surface-elevated: 11 15 24;   /* #0B0F18 */
+    --surface-subtle: 17 23 36;     /* #111724 */
+    --surface-inset: 8 11 18;       /* #080B12 */
+    --surface-hover: 24 32 50;      /* #182032 */
 
-    --popover: 225 32% 5%;
-    --popover-foreground: 210 20% 98%;
+    /* Semantic Ink (Unified Cool Slate Neutral Ramp) */
+    --ink-primary: 248 250 252;     /* #F8FAFC */
+    --ink-secondary: 203 213 225;   /* #CBD5E1 */
+    --ink-muted: 148 163 184;       /* #94A3B8 */
+    --ink-subtle: 100 116 139;      /* #64748B */
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
+    /* Semantic Hairlines */
+    --line-subtle: rgba(255, 255, 255, 0.07);
+    --line-default: rgba(255, 255, 255, 0.11);
+    --line-strong: rgba(255, 255, 255, 0.18);
 
-    --secondary: 220 20% 12%;
-    --secondary-foreground: 210 20% 98%;
+    /* Unified Brand Accent (Cobalt) */
+    --accent-primary: 37 99 235;        /* #2563EB */
+    --accent-primary-hover: 59 130 246; /* #3B82F6 */
+    --accent-ink: 96 165 250;           /* #60A5FA */
+    --accent-soft: rgba(59, 130, 246, 0.12);
+    --accent-border: rgba(96, 165, 250, 0.28);
 
-    --muted: 220 20% 10%;
-    --muted-foreground: 215 16% 62%;
+    /* Semantic Status Tokens */
+    --status-success-ink: #34D399;
+    --status-success-bg: rgba(16, 185, 129, 0.12);
+    --status-success-border: rgba(52, 211, 153, 0.28);
 
-    --accent: 220 20% 12%;
-    --accent-foreground: 210 20% 98%;
+    --status-warning-ink: #FBBF24;
+    --status-warning-bg: rgba(245, 158, 11, 0.12);
+    --status-warning-border: rgba(251, 191, 36, 0.28);
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 20% 98%;
+    --status-danger-ink: #FB7185;
+    --status-danger-bg: rgba(244, 63, 94, 0.12);
+    --status-danger-border: rgba(251, 113, 133, 0.28);
 
-    --border: 220 20% 14%;
-    --input: 220 20% 14%;
-    --ring: 224 76% 48%;
+    --status-info-ink: #38BDF8;
+    --status-info-bg: rgba(14, 165, 233, 0.12);
+    --status-info-border: rgba(56, 189, 248, 0.28);
 
+    /* Elevation & Specular Depth */
+    --shadow-card: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 16px 36px -12px rgba(0, 0, 0, 0.55);
+    --shadow-popover: 0 24px 60px -12px rgba(0, 0, 0, 0.85), inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
+    --hero-headline: linear-gradient(180deg, #FFFFFF 0%, #CBD5E1 100%);
+    --hero-glow: radial-gradient(ellipse 65% 50% at 50% 0%, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.03) 45%, transparent 75%);
+    --grid-line: rgba(255, 255, 255, 0.02);
+
+    /* Shadcn/Base Compatibility */
+    --background: 220 38% 3%;
+    --foreground: 210 40% 98%;
+    --card: 222 37% 7%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 37% 7%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 221 36% 10%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 221 36% 10%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 221 36% 10%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 347 77% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 221 83% 53%;
     --radius: 0.75rem;
   }
 
   html.light {
+    color-scheme: light;
+
+    /* Semantic Surfaces */
+    --surface-canvas: 248 250 252;    /* #F8FAFC */
+    --surface-elevated: 255 255 255;  /* #FFFFFF */
+    --surface-subtle: 241 245 249;    /* #F1F5F9 */
+    --surface-inset: 248 250 252;     /* #F8FAFC */
+    --surface-hover: 226 232 240;     /* #E2E8F0 */
+
+    /* Semantic Ink */
+    --ink-primary: 15 23 42;          /* #0F172A */
+    --ink-secondary: 51 65 85;        /* #334155 */
+    --ink-muted: 71 85 105;           /* #475569 */
+    --ink-subtle: 100 116 139;        /* #64748B */
+
+    /* Semantic Hairlines */
+    --line-subtle: rgba(15, 23, 42, 0.08);
+    --line-default: rgba(15, 23, 42, 0.12);
+    --line-strong: rgba(15, 23, 42, 0.20);
+
+    /* Unified Brand Accent (Cobalt) */
+    --accent-primary: 37 99 235;        /* #2563EB */
+    --accent-primary-hover: 29 78 216;  /* #1D4ED8 */
+    --accent-ink: 37 99 235;            /* #2563EB */
+    --accent-soft: #EFF6FF;
+    --accent-border: #BFDBFE;
+
+    /* Semantic Status Tokens */
+    --status-success-ink: #059669;
+    --status-success-bg: #ECFDF5;
+    --status-success-border: #A7F3D0;
+
+    --status-warning-ink: #D97706;
+    --status-warning-bg: #FFFBEB;
+    --status-warning-border: #FDE68A;
+
+    --status-danger-ink: #E11D48;
+    --status-danger-bg: #FFF1F2;
+    --status-danger-border: #FECDD3;
+
+    --status-info-ink: #0284C7;
+    --status-info-bg: #F0F9FF;
+    --status-info-border: #BAE6FD;
+
+    /* Elevation & Specular Depth */
+    --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -4px rgba(15, 23, 42, 0.05);
+    --shadow-popover: 0 20px 45px -10px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.04);
+    --hero-headline: linear-gradient(135deg, #0F172A 0%, #1E3A8A 58%, #2563EB 100%);
+    --hero-glow: radial-gradient(ellipse 65% 50% at 50% 0%, rgba(37, 99, 235, 0.07) 0%, rgba(14, 165, 233, 0.03) 45%, transparent 75%);
+    --grid-line: rgba(15, 23, 42, 0.03);
+
+    /* Shadcn/Base Compatibility */
     --background: 210 40% 98%;
     --foreground: 222 47% 11%;
-
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-
     --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
-
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
-
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-
     --accent: 210 40% 96%;
     --accent-foreground: 222 47% 11%;
-
     --destructive: 347 77% 50%;
     --destructive-foreground: 0 0% 100%;
-
     --border: 214 32% 91%;
     --input: 213 27% 84%;
     --ring: 221 83% 53%;
@@ -68,13 +156,7 @@
   *,
   ::before,
   ::after {
-    border-color: rgba(255, 255, 255, 0.08);
-  }
-
-  html.light *,
-  html.light ::before,
-  html.light ::after {
-    border-color: #E2E8F0;
+    border-color: var(--line-subtle);
   }
 }
 
@@ -85,38 +167,58 @@ html {
 }
 
 body {
-  color: #F5F5F7;
-  background: #050507;
+  color: rgb(var(--ink-primary));
+  background-color: rgb(var(--surface-canvas));
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "cv01" 1;
   min-height: 100vh;
-  selection-background-color: rgba(59, 130, 246, 0.3);
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.22s ease, color 0.22s ease;
 }
 
-/* Subtle architectural grid overlay */
+/* Semantic Display Gradient & Ambient Illumination */
+.hero-headline-gradient {
+  background-image: var(--hero-headline);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-ambient-glow {
+  background: var(--hero-glow);
+}
+
 .fintech-grid {
   background-size: 64px 64px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
 }
 
-html.light .fintech-grid {
-  background-image: 
-    linear-gradient(to right, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.035) 1px, transparent 1px);
-}
+/* Reusable Semantic Primitives */
+@layer components {
+  .surface-card {
+    @apply bg-elevated border border-line-subtle shadow-surface rounded-2xl transition-colors duration-150;
+  }
 
-/* Apple-inspired glass card surface */
-.apple-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.01) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 20px 40px -15px rgba(0, 0, 0, 0.6);
-}
+  .surface-inset {
+    @apply bg-inset border border-line-subtle rounded-xl;
+  }
 
-/* Ambient radial illumination */
-.fintech-glow {
-  background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.12) 0%, rgba(16, 185, 129, 0.04) 45%, transparent 75%);
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-accent hover:bg-accent-hover text-white font-semibold shadow-[0_4px_16px_rgba(37,99,235,0.28),inset_0_1px_0_0_rgba(255,255,255,0.2)] transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas whitespace-nowrap;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-subtle hover:bg-hover text-ink border border-line hover:border-line-strong font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas whitespace-nowrap;
+  }
+
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas;
+  }
+
+  .input-field {
+    @apply w-full bg-inset border border-line rounded-xl px-4 py-2.5 text-sm text-ink placeholder:text-ink-subtle focus:outline-none focus:bg-elevated focus:border-accent focus:ring-4 focus:ring-accent/10 transition-all;
+  }
 }
 
 /* Smooth custom scrollbars */
@@ -124,396 +226,16 @@ html.light .fintech-grid {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
-  background: #050507;
+  background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--line-default);
   border-radius: 9999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* ============================================================================
-   Light Mode Support (Stripe / Mercury / Linear Daylight Fintech Palette)
-   ============================================================================ */
-html.light {
-  color-scheme: light;
-}
-
-/* 1. Luminous Alabaster Canvas & Subtle Atmospheric Wash */
-html.light body {
-  background-color: #F8FAFC !important;
-  background-image: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(37, 99, 235, 0.055) 0%, rgba(14, 165, 233, 0.025) 45%, transparent 75%);
-  background-attachment: fixed;
-  color: #0F172A !important;
-}
-
-html.light .min-h-screen,
-html.light .bg-\[\#050507\],
-html.light .bg-\[\#070B14\] {
-  background-color: #F8FAFC !important;
-  color: #0F172A;
-}
-
-html.light ::-webkit-scrollbar-track {
-  background: #F8FAFC;
-}
-
-html.light ::-webkit-scrollbar-thumb {
-  background: rgba(15, 23, 42, 0.18);
-}
-
-html.light ::-webkit-scrollbar-thumb:hover {
-  background: rgba(15, 23, 42, 0.32);
-}
-
-/* 2. Frosted Crystal Header & Footer */
-html.light header,
-html.light footer,
-html.light .bg-\[\#05070B\]\/80,
-html.light .bg-\[\#05070B\]\/95 {
-  background-color: rgba(255, 255, 255, 0.86) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-color: #E2E8F0 !important;
-  box-shadow: 0 4px 24px -4px rgba(15, 23, 42, 0.04) !important;
-}
-
-/* 3. Pure White Elevated Cards with Crisp Slate Borders & Soft Depth */
-html.light .bg-\[\#090B10\],
-html.light .bg-\[\#090B10\]\/90,
-html.light .bg-\[\#0A0D14\]\/95,
-html.light .bg-\[\#0A0E17\]\/95,
-html.light .bg-\[\#0E131F\],
-html.light .bg-\[\#11141C\],
-html.light .bg-navy-900,
-html.light .bg-navy-900\/40,
-html.light .bg-navy-900\/60,
-html.light .bg-navy-900\/70,
-html.light .bg-navy-900\/80,
-html.light .bg-navy-900\/95 {
-  background-color: #FFFFFF !important;
-  border-color: #E2E8F0 !important;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 8px 24px -4px rgba(15, 23, 42, 0.05) !important;
-}
-
-/* 4. Cool Ice-Slate Nested Surfaces & Interactive Pills */
-html.light .bg-white\/\[0\.01\],
-html.light .bg-white\/\[0\.02\],
-html.light .bg-white\/\[0\.03\],
-html.light .bg-navy-950\/40,
-html.light .bg-navy-950\/60,
-html.light .bg-navy-950\/70,
-html.light .bg-navy-950\/80,
-html.light .bg-navy-950\/90,
-html.light .bg-black\/20,
-html.light .bg-black\/25,
-html.light .bg-black\/30,
-html.light .bg-black\/40,
-html.light .bg-black\/50,
-html.light .bg-black\/60 {
-  background-color: #F8FAFC !important;
-  border-color: #E2E8F0 !important;
-}
-
-html.light .bg-white\/\[0\.04\],
-html.light .bg-white\/\[0\.05\],
-html.light .bg-white\/\[0\.06\],
-html.light .bg-white\/\[0\.07\],
-html.light .bg-white\/\[0\.08\],
-html.light .bg-white\/\[0\.1\],
-html.light .bg-white\/\[0\.12\],
-html.light .bg-navy-850,
-html.light .bg-navy-800,
-html.light .bg-navy-750 {
-  background-color: #F1F5F9 !important;
-  border-color: #E2E8F0 !important;
-}
-
-html.light .from-white\/\[0\.08\].to-white\/\[0\.02\] {
-  background-image: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%) !important;
-  border-color: #E2E8F0 !important;
-}
-
-/* Hover States */
-html.light .hover\:bg-white\/\[0\.02\]:hover,
-html.light .hover\:bg-white\/\[0\.05\]:hover,
-html.light .hover\:bg-white\/\[0\.06\]:hover,
-html.light .hover\:bg-white\/\[0\.07\]:hover,
-html.light .hover\:bg-white\/\[0\.08\]:hover,
-html.light .hover\:bg-white\/\[0\.1\]:hover,
-html.light .hover\:bg-navy-750:hover,
-html.light .hover\:bg-navy-800:hover,
-html.light .hover\:bg-navy-850:hover,
-html.light .hover\:bg-navy-950:hover {
-  background-color: #E2E8F0 !important;
-}
-
-/* Crisp Slate Borders & Dividers */
-html.light .border-white\/\[0\.02\],
-html.light .border-white\/\[0\.04\],
-html.light .border-white\/\[0\.05\],
-html.light .border-white\/\[0\.06\],
-html.light .border-white\/\[0\.07\],
-html.light .border-white\/\[0\.08\],
-html.light .border-white\/\[0\.09\],
-html.light .border-white\/\[0\.1\],
-html.light .border-white\/\[0\.12\],
-html.light .border-navy-700,
-html.light .border-navy-750,
-html.light .border-navy-800,
-html.light .border-navy-800\/80,
-html.light .border-slate-700 {
-  border-color: #E2E8F0 !important;
-}
-
-html.light .hover\:border-white\/\[0\.08\]:hover,
-html.light .hover\:border-white\/\[0\.15\]:hover,
-html.light .hover\:border-white\/\[0\.16\]:hover,
-html.light .hover\:border-navy-700:hover,
-html.light .hover\:border-slate-700:hover {
-  border-color: #CBD5E1 !important;
-}
-
-html.light .divide-white\/\[0\.06\] > :not([hidden]) ~ :not([hidden]) {
-  border-color: #E2E8F0 !important;
-}
-
-/* Gradient Banner Override (KnowledgeBase CTA) */
-html.light .via-\[\#090B10\].to-\[\#090B10\] {
-  background-image: linear-gradient(90deg, #EFF6FF 0%, #FFFFFF 55%, #FFFFFF 100%) !important;
-  border-color: #BFDBFE !important;
-}
-
-/* Glass Cards & Panels */
-html.light .apple-card,
-html.light .glass-card,
-html.light .glass-panel,
-html.light .surface-elevated {
-  background: #FFFFFF !important;
-  border-color: #E2E8F0 !important;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03), 0 8px 24px -4px rgba(15, 23, 42, 0.05) !important;
-}
-
-html.light .glass-card:hover {
-  background: #FFFFFF !important;
-  border-color: #93C5FD !important;
-  box-shadow: 0 10px 28px -4px rgba(37, 99, 235, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04) !important;
-}
-
-/* 5. Deep Navy-to-Cobalt Editorial Headline */
-html.light .bg-clip-text.text-transparent {
-  background-image: linear-gradient(135deg, #0F172A 0%, #1E3A8A 55%, #2563EB 100%) !important;
-  color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
-}
-
-/* 6. Crisp Oxford Typography Hierarchy */
-html.light .text-white,
-html.light .hover\:text-white:hover,
-html.light .group:hover .group-hover\:text-white,
-html.light [class*="text-[#F5F5F7]"],
-html.light .text-slate-50,
-html.light .text-slate-100,
-html.light .text-slate-200,
-html.light .text-zinc-50,
-html.light .text-zinc-100,
-html.light .text-zinc-200 {
-  color: #0F172A !important;
-}
-
-html.light .text-slate-300,
-html.light .text-zinc-300 {
-  color: #334155 !important;
-}
-
-html.light .text-slate-400,
-html.light .text-zinc-400 {
-  color: #475569 !important;
-}
-
-html.light .text-slate-500,
-html.light .text-zinc-500,
-html.light .text-zinc-600,
-html.light .text-zinc-700 {
-  color: #64748B !important;
-}
-
-/* 7. Vibrant Semantic Accents & Tinted Status Badges */
-/* Cobalt Brand Accent */
-html.light .text-brand-200,
-html.light .text-brand-300,
-html.light .text-brand-400,
-html.light .hover\:text-brand-300:hover,
-html.light .group:hover .group-hover\:text-brand-300,
-html.light .text-blue-300,
-html.light .text-blue-400 {
-  color: #2563EB !important;
-}
-
-html.light .bg-brand-500\/10,
-html.light .bg-brand-500\/15,
-html.light .bg-brand-500\/20,
-html.light .bg-brand-500\/\[0\.04\],
-html.light .bg-brand-600\/15,
-html.light .bg-brand-600\/\[0\.03\],
-html.light .bg-brand-400\/10 {
-  background-color: #EFF6FF !important;
-  border-color: #BFDBFE !important;
-}
-
-/* Emerald Verified Accent */
-html.light .text-emerald-100,
-html.light .text-emerald-200,
-html.light .text-emerald-300,
-html.light .text-emerald-400 {
-  color: #059669 !important;
-}
-
-html.light .bg-emerald-950\/20,
-html.light .bg-emerald-950\/30,
-html.light .bg-emerald-950\/40,
-html.light .bg-emerald-500\/10,
-html.light .bg-emerald-500\/20,
-html.light .bg-emerald-600\/20,
-html.light .bg-emerald-400\/10,
-html.light .bg-\[\#0A1612\]\/95 {
-  background-color: #ECFDF5 !important;
-  border-color: #A7F3D0 !important;
-}
-
-/* Amber Warning Accent */
-html.light .text-amber-200,
-html.light .text-amber-300,
-html.light .text-amber-400 {
-  color: #D97706 !important;
-}
-
-html.light .bg-amber-950\/20,
-html.light .bg-amber-950\/30,
-html.light .bg-amber-500\/10,
-html.light .bg-amber-500\/20,
-html.light .bg-amber-400\/10,
-html.light .bg-\[\#1A1408\]\/95 {
-  background-color: #FFFBEB !important;
-  border-color: #FDE68A !important;
-}
-
-/* Rose Threat / Error Accent */
-html.light .text-rose-100,
-html.light .text-rose-200,
-html.light .text-rose-300,
-html.light .text-rose-400,
-html.light .text-rose-400\/80 {
-  color: #E11D48 !important;
-}
-
-html.light .bg-rose-950\/20,
-html.light .bg-rose-950\/30,
-html.light .bg-rose-950\/40,
-html.light .bg-rose-500\/10,
-html.light .bg-rose-500\/20,
-html.light .bg-rose-500\/\[0\.04\],
-html.light .bg-\[\#180A0A\]\/95 {
-  background-color: #FFF1F2 !important;
-  border-color: #FECDD3 !important;
-}
-
-html.light .hover\:bg-rose-950\/70:hover,
-html.light .hover\:bg-rose-500\/10:hover {
-  background-color: #FFE4E6 !important;
-}
-
-/* Cyan Multi-Chain / Solver Accent */
-html.light .text-cyan-200,
-html.light .text-cyan-300,
-html.light .text-cyan-400,
-html.light .hover\:text-cyan-300:hover {
-  color: #0284C7 !important;
-}
-
-html.light .bg-cyan-500\/10,
-html.light .bg-cyan-500\/20,
-html.light .bg-cyan-500\/\[0\.04\],
-html.light .bg-\[\#0B132B\]\/95 {
-  background-color: #F0F9FF !important;
-  border-color: #BAE6FD !important;
-}
-
-/* Royal Cobalt Primary CTAs & Active Segmented Tabs */
-html.light .bg-white:not(.text-black) {
-  background-color: #2563EB !important;
-}
-
-html.light .bg-white.text-black {
-  background: linear-gradient(180deg, #2563EB 0%, #1D4ED8 100%) !important;
-  color: #FFFFFF !important;
-  border-color: #1D4ED8 !important;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-}
-
-html.light .bg-white.text-black * {
-  color: #FFFFFF !important;
-}
-
-html.light .bg-white.text-black:hover {
-  background: linear-gradient(180deg, #1D4ED8 0%, #1E40AF 100%) !important;
-}
-
-/* Keep white text inside solid brand/accent buttons & badges (including hover states) */
-html.light .bg-brand-600,
-html.light .bg-brand-600 *,
-html.light .bg-brand-600:hover,
-html.light .bg-brand-600:hover *,
-html.light .bg-brand-500,
-html.light .bg-brand-500 *,
-html.light .bg-brand-500:hover,
-html.light .bg-brand-500:hover *,
-html.light .bg-emerald-600,
-html.light .bg-emerald-600 *,
-html.light .bg-emerald-600:hover,
-html.light .bg-emerald-600:hover *,
-html.light .bg-emerald-500,
-html.light .bg-emerald-500 *,
-html.light .bg-emerald-500:hover,
-html.light .bg-emerald-500:hover *,
-html.light .bg-rose-600,
-html.light .bg-rose-600 *,
-html.light .bg-rose-600:hover,
-html.light .bg-rose-600:hover *,
-html.light [class*="from-brand-500"],
-html.light [class*="from-brand-500"] *,
-html.light [class*="from-emerald-500"],
-html.light [class*="from-emerald-500"] * {
-  color: #FFFFFF !important;
-}
-
-/* 8. Crisp Form Controls */
-html.light input,
-html.light select,
-html.light textarea {
-  background-color: #F8FAFC !important;
-  color: #0F172A !important;
-  border-color: #CBD5E1 !important;
-}
-
-html.light .bg-\[\#0D111A\],
-html.light .bg-navy-950 {
-  background-color: #F8FAFC !important;
-  border-color: #CBD5E1 !important;
-}
-
-html.light input:focus,
-html.light select:focus,
-html.light textarea:focus {
-  background-color: #FFFFFF !important;
-  border-color: #2563EB !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
-}
-
-html.light input::placeholder,
-html.light textarea::placeholder {
-  color: #94A3B8 !important;
+  background: var(--line-strong);
 }

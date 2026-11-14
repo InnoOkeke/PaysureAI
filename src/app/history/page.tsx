@@ -92,16 +92,16 @@ export default function HistoryPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#050507] py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-canvas py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-navy-800">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-line-subtle">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight">
             Transaction History &amp; Receipts
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-ink-muted mt-1">
             {isConnected ? (
-              <span>Scoped to connected account: <strong className="text-brand-300 font-mono">{accountId}</strong></span>
+              <span>Scoped to connected account: <strong className="text-accent-ink font-mono">{accountId}</strong></span>
             ) : (
               <span>Complete verifiable ledger of payments executed on NEAR Protocol.</span>
             )}
@@ -110,23 +110,23 @@ export default function HistoryPage() {
 
         <div className="flex items-center gap-3">
           {isConnected && (
-            <div className="flex p-1 rounded-xl bg-navy-900 border border-navy-800 text-xs">
+            <div className="flex p-1 rounded-xl bg-subtle border border-line-subtle text-xs">
               <button
                 onClick={() => setViewScope("mine")}
-                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all focus-ring ${
                   viewScope === "mine"
-                    ? "bg-brand-600 text-white"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-accent text-white shadow-sm"
+                    : "text-ink-muted hover:text-ink"
                 }`}
               >
                 My Transactions
               </button>
               <button
                 onClick={() => setViewScope("all")}
-                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all focus-ring ${
                   viewScope === "all"
-                    ? "bg-brand-600 text-white"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-accent text-white shadow-sm"
+                    : "text-ink-muted hover:text-ink"
                 }`}
               >
                 All Network
@@ -136,7 +136,7 @@ export default function HistoryPage() {
 
           <Link
             href="/pay"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md shadow-brand-600/20 transition-all w-fit"
+            className="btn-primary px-4 py-2 rounded-xl text-xs"
           >
             <Send className="h-4 w-4" />
             <span>New Payment</span>
@@ -145,28 +145,29 @@ export default function HistoryPage() {
       </div>
 
       {/* Search Bar */}
-      <div className="bg-navy-900/60 p-4 rounded-2xl border border-navy-800 flex items-center justify-between gap-4">
+      <div className="surface-card p-4 flex items-center justify-between gap-4">
         <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-3.5 top-3 h-4 w-4 text-ink-subtle" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by Tx hash, payee, sender, or ref..."
-            className="w-full bg-navy-950 border border-navy-800 rounded-xl pl-10 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 font-mono"
+            aria-label="Search transactions"
+            className="input-field pl-10 pr-3 py-2 text-xs font-mono"
           />
         </div>
-        <span className="text-xs text-slate-400 font-mono">{filtered.length} records found</span>
+        <span className="text-xs text-ink-muted font-mono">{filtered.length} records found</span>
       </div>
 
       {/* Transactions Table */}
       {loading ? (
-        <div className="py-20 text-center text-slate-500 text-xs">Loading ledger...</div>
+        <div className="py-20 text-center text-ink-subtle text-xs">Loading ledger...</div>
       ) : filtered.length === 0 ? (
-        <div className="py-20 text-center rounded-2xl bg-navy-900/40 border border-dashed border-navy-800">
-          <History className="h-10 w-10 text-slate-600 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-white">No Payments Recorded</h3>
-          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+        <div className="py-20 text-center rounded-2xl bg-elevated border border-dashed border-line">
+          <History className="h-10 w-10 text-ink-subtle mx-auto mb-3" />
+          <h3 className="text-base font-bold text-ink">No Payments Recorded</h3>
+          <p className="text-xs text-ink-muted mt-1 max-w-sm mx-auto">
             {isConnected ? (
               <span>Your connected wallet (<strong>{accountId}</strong>) has not executed any payments yet.</span>
             ) : (
@@ -179,43 +180,43 @@ export default function HistoryPage() {
           {filtered.map((p) => (
             <div
               key={p.id}
-              className="p-5 rounded-2xl bg-navy-900/80 border border-navy-800 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-slate-700 transition-colors"
+              className="p-5 surface-card flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-line-strong"
             >
               <div className="space-y-1">
                 <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  <span className="font-mono text-xs font-bold text-white">
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                  <span className="font-mono text-xs font-bold text-ink">
                     Payee: {p.recipientAddress}
                   </span>
                   {p.receipt?.receiptNumber && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/10 text-brand-300 border border-brand-500/20">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-accent-soft text-accent-ink border border-accent-border">
                       {p.receipt.receiptNumber}
                     </span>
                   )}
                   {p.invoiceReference && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-navy-800 text-slate-300">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-subtle text-ink-secondary">
                       Ref: {p.invoiceReference}
                     </span>
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 font-mono">
+                <div className="flex flex-wrap items-center gap-4 text-xs text-ink-muted font-mono">
                   <span>Sender: {p.senderAddress}</span>
                   <span>&bull;</span>
                   <span>Tx: {formatAddress(p.transactionHash, 8)}</span>
                   <span>&bull;</span>
                   <span>{new Date(p.createdAt).toLocaleString()}</span>
                   <span>&bull;</span>
-                  <span className="text-emerald-400">NEAR Protocol</span>
+                  <span className="text-success">NEAR Protocol</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between md:justify-end gap-4">
                 <div className="text-right">
-                  <span className="text-base font-bold text-white block">
-                    {formatCurrency(p.amount)} <span className="text-xs font-normal text-brand-300">NEAR</span>
+                  <span className="text-base font-bold text-ink block">
+                    {formatCurrency(p.amount)} <span className="text-xs font-normal text-accent-ink">NEAR</span>
                   </span>
-                  <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full border border-emerald-400/20">
+                  <span className="text-[10px] uppercase font-bold text-success bg-success-soft px-2 py-0.5 rounded-full border border-success-border">
                     Confirmed
                   </span>
                 </div>
@@ -225,14 +226,15 @@ export default function HistoryPage() {
                     href={`${NEAR_CONFIG.explorerUrl}/txns/${p.transactionHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 rounded-xl bg-navy-800 hover:bg-navy-750 text-slate-300 hover:text-white transition-colors"
+                    className="p-2 rounded-xl bg-subtle hover:bg-hover text-ink-secondary hover:text-ink transition-colors focus-ring"
                     title="View on NEARBlocks"
+                    aria-label="View on NEARBlocks"
                   >
                     <ExternalLink className="h-4 w-4" />
                   </a>
                   <button
                     onClick={() => downloadReceipt(p)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600/15 hover:bg-brand-600/25 text-brand-300 border border-brand-500/30 text-xs font-semibold transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-soft hover:bg-accent/20 text-accent-ink border border-accent-border text-xs font-semibold transition-colors focus-ring"
                     title="Download Receipt"
                   >
                     <Download className="h-3.5 w-3.5" />

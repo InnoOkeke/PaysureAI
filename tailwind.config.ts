@@ -10,17 +10,61 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        navy: {
-          950: "#05070B",
-          900: "#0A0D14",
-          850: "#0F141F",
-          800: "#171E2E",
-          750: "#1E273B",
-          700: "#28334A",
-          600: "#475569",
+        // Semantic Surface Tokens
+        canvas: "rgb(var(--surface-canvas) / <alpha-value>)",
+        elevated: "rgb(var(--surface-elevated) / <alpha-value>)",
+        subtle: "rgb(var(--surface-subtle) / <alpha-value>)",
+        inset: "rgb(var(--surface-inset) / <alpha-value>)",
+        hover: "rgb(var(--surface-hover) / <alpha-value>)",
+
+        // Semantic Typography / Ink Tokens
+        ink: {
+          DEFAULT: "rgb(var(--ink-primary) / <alpha-value>)",
+          secondary: "rgb(var(--ink-secondary) / <alpha-value>)",
+          muted: "rgb(var(--ink-muted) / <alpha-value>)",
+          subtle: "rgb(var(--ink-subtle) / <alpha-value>)",
         },
+
+        // Semantic Hairline / Border Tokens
+        line: {
+          subtle: "var(--line-subtle)",
+          DEFAULT: "var(--line-default)",
+          strong: "var(--line-strong)",
+        },
+
+        // Unified Brand Accent Tokens
+        accent: {
+          DEFAULT: "rgb(var(--accent-primary) / <alpha-value>)",
+          hover: "rgb(var(--accent-primary-hover) / <alpha-value>)",
+          ink: "rgb(var(--accent-ink) / <alpha-value>)",
+          soft: "var(--accent-soft)",
+          border: "var(--accent-border)",
+          foreground: "#FFFFFF",
+        },
+
+        // Semantic Status Tokens
+        success: {
+          DEFAULT: "var(--status-success-ink)",
+          soft: "var(--status-success-bg)",
+          border: "var(--status-success-border)",
+        },
+        warning: {
+          DEFAULT: "var(--status-warning-ink)",
+          soft: "var(--status-warning-bg)",
+          border: "var(--status-warning-border)",
+        },
+        danger: {
+          DEFAULT: "var(--status-danger-ink)",
+          soft: "var(--status-danger-bg)",
+          border: "var(--status-danger-border)",
+        },
+        info: {
+          DEFAULT: "var(--status-info-ink)",
+          soft: "var(--status-info-bg)",
+          border: "var(--status-info-border)",
+        },
+
+        // Legacy Brand Ramp (kept for compatibility)
         brand: {
           50: "#EFF6FF",
           100: "#DBEAFE",
@@ -40,34 +84,8 @@ const config: Config = {
           mismatch: "#EF4444",
           unverified: "#94A3B8",
         },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -80,7 +98,8 @@ const config: Config = {
       boxShadow: {
         fintech: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)",
         elevated: "0 10px 25px -5px rgba(11, 17, 32, 0.1), 0 8px 10px -6px rgba(11, 17, 32, 0.1)",
-        card: "0 0 0 1px rgba(255, 255, 255, 0.05), 0 4px 20px -2px rgba(0, 0, 0, 0.25)",
+        surface: "var(--shadow-card)",
+        popover: "var(--shadow-popover)",
       },
     },
   },
@@ -88,4 +107,3 @@ const config: Config = {
 };
 
 export default config;
-

@@ -28,7 +28,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <NearWalletProvider>
-          {mounted ? children : <div className="min-h-screen bg-[#070B14]" />}
+          {mounted ? children : <div className="min-h-screen bg-canvas" />}
         </NearWalletProvider>
       </QueryClientProvider>
     </WagmiProvider>

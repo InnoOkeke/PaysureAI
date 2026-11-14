@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen flex flex-col antialiased selection:bg-blue-500/25 selection:text-white`}>
+      <body className={`${inter.className} min-h-screen flex flex-col antialiased selection:bg-accent/20 selection:text-ink`}>
         <ThemeProvider>
           <ToastProvider>
             <Web3Provider>

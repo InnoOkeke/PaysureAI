@@ -343,45 +343,46 @@ export function KnowledgeBase() {
   }, [searchQuery]);
 
   return (
-    <section id="knowledge-base" className="py-24 sm:py-32 bg-[#050507] border-t border-white/[0.06] relative">
+    <section id="knowledge-base" className="py-24 sm:py-32 bg-canvas border-t border-line-subtle relative">
       {/* Background Subtle Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-brand-600/[0.03] blur-[120px] pointer-events-none rounded-full" />
+      <div className="hero-ambient-glow absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none opacity-60" />
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 relative">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs font-mono uppercase tracking-widest text-brand-400">
+              <span className="text-xs font-mono uppercase tracking-widest text-accent-ink">
                 Institutional Knowledge Base
               </span>
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
-              <span className="text-xs text-zinc-500 font-mono">Documentation & Setup</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-ink-subtle" />
+              <span className="text-xs text-ink-subtle font-mono">Documentation &amp; Setup</span>
             </div>
-            <h2 className="text-3xl sm:text-5xl font-semibold tracking-[-0.035em] text-white leading-[1.1]">
+            <h2 className="text-3xl sm:text-5xl font-semibold tracking-[-0.035em] text-ink leading-[1.1]">
               Understand every feature. <br />
-              <span className="text-zinc-500">Configure with confidence.</span>
+              <span className="text-ink-subtle">Configure with confidence.</span>
             </h2>
-            <p className="mt-4 text-base text-zinc-400 leading-relaxed font-normal">
-              A comprehensive technical guide to PaySure's verification primitives, intent compiler, invoicing protocols, and corporate treasury policies.
+            <p className="mt-4 text-base text-ink-muted leading-relaxed font-normal">
+              A comprehensive technical guide to PaySure&apos;s verification primitives, intent compiler, invoicing protocols, and corporate treasury policies.
             </p>
           </div>
 
           {/* Quick Search */}
           <div className="w-full md:w-72 relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-subtle" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search features, CoP, KYC..."
-              className="w-full bg-[#090B10] border border-white/[0.08] focus:border-brand-500/50 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 outline-none transition-colors"
+              aria-label="Search Knowledge Base"
+              className="input-field rounded-2xl pl-10 pr-4 py-2.5 text-xs"
             />
           </div>
         </div>
 
         {/* Feature Selector Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none mb-8 border-b border-white/[0.06]">
+        <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none mb-8 border-b border-line-subtle">
           {filteredGuides.map((guide) => {
             const Icon = guide.icon;
             const isSelected = selectedGuide.id === guide.id;
@@ -389,13 +390,13 @@ export function KnowledgeBase() {
               <button
                 key={guide.id}
                 onClick={() => setActiveTab(guide.id)}
-                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all focus-ring ${
                   isSelected
-                    ? "bg-white text-black shadow-lg shadow-white/5 font-semibold"
-                    : "bg-[#090B10] text-zinc-400 border border-white/[0.06] hover:text-white hover:border-white/[0.15]"
+                    ? "bg-accent text-white shadow-sm font-semibold"
+                    : "bg-elevated text-ink-muted border border-line-subtle hover:text-ink hover:border-line-strong"
                 }`}
               >
-                <Icon className={`h-4 w-4 ${isSelected ? "text-black" : "text-zinc-500"}`} />
+                <Icon className={`h-4 w-4 ${isSelected ? "text-white" : "text-ink-subtle"}`} />
                 <span>{guide.title}</span>
               </button>
             );
@@ -403,28 +404,28 @@ export function KnowledgeBase() {
         </div>
 
         {/* Active Feature Deep Dive Card */}
-        <div className="rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 sm:p-10 mb-16 shadow-2xl space-y-10">
+        <div className="rounded-3xl surface-card p-6 sm:p-10 mb-16 shadow-popover space-y-10">
           {/* Header Row */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-8 border-b border-white/[0.06]">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-8 border-b border-line-subtle">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <span className="px-2.5 py-0.5 rounded-md bg-brand-500/10 border border-brand-500/20 text-[11px] font-mono text-brand-400 uppercase tracking-wider">
+                <span className="px-2.5 py-0.5 rounded-md bg-accent-soft border border-accent-border text-[11px] font-mono text-accent-ink uppercase tracking-wider">
                   {selectedGuide.category}
                 </span>
-                <span className="text-zinc-600">·</span>
-                <span className="text-xs text-zinc-500 font-mono">NEAR Protocol Testnet</span>
+                <span className="text-ink-subtle">&middot;</span>
+                <span className="text-xs text-ink-subtle font-mono">NEAR Protocol Testnet</span>
               </div>
-              <h3 className="text-2xl sm:text-3xl font-semibold text-white tracking-[-0.02em]">
+              <h3 className="text-2xl sm:text-3xl font-semibold text-ink tracking-[-0.02em]">
                 {selectedGuide.title}
               </h3>
-              <p className="text-sm sm:text-base text-zinc-400 mt-2 max-w-2xl leading-relaxed">
+              <p className="text-sm sm:text-base text-ink-muted mt-2 max-w-2xl leading-relaxed">
                 {selectedGuide.headline}
               </p>
             </div>
 
             <Link
               href={selectedGuide.actionHref}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black text-xs font-semibold tracking-tight transition-all shadow-md self-start lg:self-center"
+              className="btn-primary px-5 py-2.5 text-xs self-start lg:self-center"
             >
               <span>{selectedGuide.actionText}</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -436,13 +437,13 @@ export function KnowledgeBase() {
             {/* Left Column: Technical Mechanism */}
             <div className="space-y-6">
               <div>
-                <span className="text-xs font-mono uppercase tracking-widest text-zinc-500 block mb-2">
+                <span className="text-xs font-mono uppercase tracking-widest text-ink-subtle block mb-2">
                   System Architecture
                 </span>
-                <h4 className="text-lg font-semibold text-white tracking-tight">
+                <h4 className="text-lg font-semibold text-ink tracking-tight">
                   How it operates under the hood
                 </h4>
-                <p className="text-xs sm:text-sm text-zinc-400 mt-1 leading-relaxed">
+                <p className="text-xs sm:text-sm text-ink-muted mt-1 leading-relaxed">
                   {selectedGuide.description}
                 </p>
               </div>
@@ -451,13 +452,13 @@ export function KnowledgeBase() {
                 {selectedGuide.howItWorks.map((item, idx) => {
                   const [title, desc] = item.split(": ");
                   return (
-                    <div key={idx} className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.04] space-y-1">
+                    <div key={idx} className="p-3.5 rounded-xl surface-inset space-y-1">
                       <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                        <span className="text-xs font-semibold text-zinc-200">{title}</span>
+                        <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                        <span className="text-xs font-semibold text-ink">{title}</span>
                       </div>
                       {desc && (
-                        <p className="text-xs text-zinc-400 pl-6 leading-relaxed">
+                        <p className="text-xs text-ink-muted pl-6 leading-relaxed">
                           {desc}
                         </p>
                       )}
@@ -467,10 +468,10 @@ export function KnowledgeBase() {
               </div>
 
               {/* Security Advisory Pill */}
-              <div className="p-4 rounded-xl bg-brand-500/[0.04] border border-brand-500/20 flex items-start gap-3">
-                <Lock className="h-4 w-4 text-brand-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-zinc-300 leading-relaxed">
-                  <span className="font-semibold text-brand-300">Security Guarantee: </span>
+              <div className="p-4 rounded-xl bg-accent-soft border border-accent-border flex items-start gap-3">
+                <Lock className="h-4 w-4 text-accent-ink shrink-0 mt-0.5" />
+                <p className="text-xs text-ink-secondary leading-relaxed">
+                  <span className="font-semibold text-accent-ink">Security Guarantee: </span>
                   {selectedGuide.securityNote}
                 </p>
               </div>
@@ -479,10 +480,10 @@ export function KnowledgeBase() {
             {/* Right Column: Step-by-Step Setup & Interactive Sample */}
             <div className="space-y-6">
               <div>
-                <span className="text-xs font-mono uppercase tracking-widest text-zinc-500 block mb-2">
+                <span className="text-xs font-mono uppercase tracking-widest text-ink-subtle block mb-2">
                   Deployment Checklist
                 </span>
-                <h4 className="text-lg font-semibold text-white tracking-tight">
+                <h4 className="text-lg font-semibold text-ink tracking-tight">
                   Step-by-step setup guide
                 </h4>
               </div>
@@ -490,11 +491,11 @@ export function KnowledgeBase() {
               {/* Steps List */}
               <div className="space-y-2.5">
                 {selectedGuide.setupSteps.map((stepItem, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                    <span className="font-mono text-xs font-bold text-brand-400 bg-brand-400/10 px-2 py-0.5 rounded">
+                  <div key={idx} className="flex items-start gap-3 p-3 rounded-xl surface-inset">
+                    <span className="font-mono text-xs font-bold text-accent-ink bg-accent-soft px-2 py-0.5 rounded">
                       {stepItem.step}
                     </span>
-                    <span className="text-xs text-zinc-300 leading-relaxed pt-0.5">
+                    <span className="text-xs text-ink-secondary leading-relaxed pt-0.5">
                       {stepItem.instruction}
                     </span>
                   </div>
@@ -502,22 +503,22 @@ export function KnowledgeBase() {
               </div>
 
               {/* Interactive Live Sample Box */}
-              <div className="mt-4 rounded-2xl bg-[#050507] border border-white/[0.08] p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+              <div className="mt-4 rounded-2xl bg-canvas border border-line-subtle p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-line-subtle pb-3">
                   <div className="flex items-center gap-2">
-                    <Code className="h-4 w-4 text-zinc-400" />
-                    <span className="text-xs font-mono text-zinc-300">{selectedGuide.interactiveSample.title}</span>
+                    <Code className="h-4 w-4 text-ink-muted" />
+                    <span className="text-xs font-mono text-ink-secondary">{selectedGuide.interactiveSample.title}</span>
                   </div>
-                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  <span className="text-[10px] font-mono text-success bg-success-soft px-2 py-0.5 rounded border border-success-border">
                     LIVE PREVIEW
                   </span>
                 </div>
 
-                <div className="font-mono text-xs space-y-2 text-zinc-400">
+                <div className="font-mono text-xs space-y-2 text-ink-muted">
                   {Object.entries(selectedGuide.interactiveSample.content).map(([key, value]) => (
-                    <div key={key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1 border-b border-white/[0.02]">
-                      <span className="text-zinc-500 capitalize">{key.replace(/([A-Z])/g, " $1")}:</span>
-                      <span className="text-zinc-200 font-medium break-all">{String(value)}</span>
+                    <div key={key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-1 border-b border-line-subtle last:border-b-0">
+                      <span className="text-ink-subtle capitalize">{key.replace(/([A-Z])/g, " $1")}:</span>
+                      <span className="text-ink font-medium break-all">{String(value)}</span>
                     </div>
                   ))}
                 </div>
@@ -529,13 +530,13 @@ export function KnowledgeBase() {
         {/* Knowledge Base FAQs / Troubleshooting */}
         <div className="mt-20">
           <div className="max-w-2xl mb-10">
-            <span className="text-xs font-mono uppercase tracking-widest text-zinc-500 block mb-2">
-              Setup & Troubleshooting
+            <span className="text-xs font-mono uppercase tracking-widest text-ink-subtle block mb-2">
+              Setup &amp; Troubleshooting
             </span>
-            <h3 className="text-2xl sm:text-3xl font-semibold text-white tracking-[-0.02em]">
-              Frequently asked questions & operational protocols
+            <h3 className="text-2xl sm:text-3xl font-semibold text-ink tracking-[-0.02em]">
+              Frequently asked questions &amp; operational protocols
             </h3>
-            <p className="text-xs sm:text-sm text-zinc-400 mt-2">
+            <p className="text-xs sm:text-sm text-ink-muted mt-2">
               Common questions regarding Confirmation of Payee, wallet attestation, and on-chain verification.
             </p>
           </div>
@@ -546,24 +547,25 @@ export function KnowledgeBase() {
               return (
                 <div
                   key={idx}
-                  className="rounded-2xl bg-[#090B10] border border-white/[0.06] overflow-hidden transition-colors"
+                  className="rounded-2xl surface-card overflow-hidden"
                 >
                   <button
                     onClick={() => setOpenFaq(isOpen ? null : idx)}
-                    className="w-full p-5 text-left flex items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors"
+                    aria-expanded={isOpen}
+                    className="w-full p-5 text-left flex items-center justify-between gap-4 hover:bg-subtle/60 transition-colors focus-ring"
                   >
-                    <span className="text-sm font-medium text-white tracking-tight">
+                    <span className="text-sm font-medium text-ink tracking-tight">
                       {faq.question}
                     </span>
                     {isOpen ? (
-                      <ChevronUp className="h-4 w-4 text-zinc-400 shrink-0" />
+                      <ChevronUp className="h-4 w-4 text-ink-muted shrink-0" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 text-zinc-400 shrink-0" />
+                      <ChevronDown className="h-4 w-4 text-ink-muted shrink-0" />
                     )}
                   </button>
 
                   {isOpen && (
-                    <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-zinc-400 leading-relaxed border-t border-white/[0.04]">
+                    <div className="px-5 pb-5 pt-2 text-xs sm:text-sm text-ink-muted leading-relaxed border-t border-line-subtle">
                       {faq.answer}
                     </div>
                   )}
@@ -574,26 +576,20 @@ export function KnowledgeBase() {
         </div>
 
         {/* Bottom Fast Track CTA */}
-        <div className="mt-16 p-8 rounded-3xl bg-gradient-to-r from-brand-900/20 via-[#090B10] to-[#090B10] border border-brand-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="mt-16 p-8 rounded-3xl surface-card border-accent-border bg-accent-soft/40 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="space-y-1">
-            <h4 className="text-lg font-semibold text-white tracking-tight">
+            <h4 className="text-lg font-semibold text-ink tracking-tight">
               Ready to verify a counterparty or send a payment?
             </h4>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-ink-muted">
               Test on NEAR Testnet with zero risk using verified seed addresses like leprof.testnet or acme-design.testnet.
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              href="/recipients"
-              className="px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white text-xs font-semibold border border-white/[0.08] transition-all"
-            >
+            <Link href="/recipients" className="btn-secondary px-4 py-2 text-xs">
               Verify Payee
             </Link>
-            <Link
-              href="/pay"
-              className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md shadow-brand-600/25 transition-all flex items-center gap-1.5"
-            >
+            <Link href="/pay" className="btn-primary px-4 py-2 text-xs">
               <span>Launch Terminal</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>

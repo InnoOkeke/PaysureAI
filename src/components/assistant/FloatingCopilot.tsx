@@ -348,42 +348,44 @@ export function FloatingCopilot() {
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">
       {/* 1. Proactive Floating Teaser Bubble */}
       {!isOpen && showTeaser && (
-        <div className="mb-3 max-w-xs sm:max-w-sm rounded-2xl bg-navy-900/95 border border-brand-500/30 p-3.5 shadow-2xl shadow-brand-950/60 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-3 duration-300">
+        <div className="mb-3 max-w-xs sm:max-w-sm rounded-2xl bg-elevated/95 border border-accent-border p-3.5 shadow-popover backdrop-blur-xl animate-in fade-in slide-in-from-bottom-3 duration-300">
           <div className="flex items-start justify-between gap-2">
-            <div 
+            <button
+              type="button"
               onClick={() => {
                 setIsOpen(true);
                 setShowTeaser(false);
               }}
-              className="flex items-start gap-2.5 cursor-pointer group"
+              className="flex items-start gap-2.5 text-left group rounded-xl focus-ring"
             >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-navy-800 text-brand-400 border border-navy-700">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-subtle text-accent-ink border border-line-subtle">
                 <MessageSquare className="h-3.5 w-3.5" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="text-[11px] font-bold text-white group-hover:text-brand-300 transition-colors">
+                  <span className="text-[11px] font-bold text-ink group-hover:text-accent-ink transition-colors">
                     {teaser.title}
                   </span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
                 </div>
-                <p className="text-xs text-slate-300 leading-snug">
+                <p className="text-xs text-ink-secondary leading-snug">
                   {teaser.prompt}
                 </p>
-                <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-400 group-hover:translate-x-0.5 transition-transform">
+                <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-accent-ink group-hover:translate-x-0.5 transition-transform">
                   <span>Chat with Agent</span>
                   <ArrowUpRight className="h-3 w-3" />
                 </div>
               </div>
-            </div>
+            </button>
 
             <button
+              type="button"
               onClick={() => {
                 setShowTeaser(false);
                 setHasDismissedTeaser(true);
               }}
-              className="text-slate-500 hover:text-white p-1 rounded-lg transition-colors"
-              title="Dismiss prompt"
+              className="text-ink-muted hover:text-ink p-1.5 rounded-lg hover:bg-hover transition-colors focus-ring"
+              aria-label="Dismiss prompt"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -393,20 +395,20 @@ export function FloatingCopilot() {
 
       {/* 2. Expanded Floating Chat Modal */}
       {isOpen && (
-        <div className="mb-3 w-[calc(100vw-2.5rem)] sm:w-[400px] h-[550px] max-h-[82vh] rounded-3xl bg-navy-900/95 border border-navy-750 shadow-2xl shadow-black/90 backdrop-blur-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="mb-3 w-[calc(100vw-2.5rem)] sm:w-[400px] h-[550px] max-h-[82vh] rounded-3xl bg-elevated/95 border border-line shadow-popover backdrop-blur-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3.5 border-b border-navy-800 bg-navy-950/60">
+          <div className="flex items-center justify-between px-4 py-3.5 border-b border-line-subtle bg-inset">
             <div className="flex items-center gap-2.5">
               <PaySureLogo size={28} />
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-xs font-bold text-white">PaySure AI Copilot</h3>
-                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                  <h3 className="text-xs font-bold text-ink">PaySure AI Copilot</h3>
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-accent-soft text-accent-ink border border-accent-border">
                     Agent
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
-                  <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <div className="flex items-center gap-1.5 text-[10px] text-ink-muted">
+                  <span className="flex h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
                   <span>Online &bull; Grounded in NEAR Context</span>
                 </div>
               </div>
@@ -414,16 +416,18 @@ export function FloatingCopilot() {
 
             <div className="flex items-center gap-1">
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-navy-800 transition-colors"
-                title="Minimize chat"
+                className="p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-hover transition-colors focus-ring"
+                aria-label="Minimize chat"
               >
                 <Minus className="h-4 w-4" />
               </button>
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-navy-800 transition-colors"
-                title="Close chat"
+                className="p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-hover transition-colors focus-ring"
+                aria-label="Close chat"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -442,8 +446,8 @@ export function FloatingCopilot() {
                 <div
                   className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-xs ${
                     m.role === "user"
-                      ? "bg-brand-600 text-white"
-                      : "bg-navy-800 border border-navy-700 text-brand-400"
+                      ? "bg-accent text-white"
+                      : "bg-subtle border border-line-subtle text-accent-ink"
                   }`}
                 >
                   {m.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
@@ -452,58 +456,58 @@ export function FloatingCopilot() {
                 <div
                   className={`p-3 rounded-2xl max-w-[85%] leading-relaxed ${
                     m.role === "user"
-                      ? "bg-brand-600 text-white rounded-tr-none shadow-sm"
-                      : "bg-navy-950/90 text-slate-200 border border-navy-800 rounded-tl-none shadow-sm space-y-3"
+                      ? "bg-accent text-white rounded-tr-none shadow-sm"
+                      : "bg-inset text-ink-secondary border border-line-subtle rounded-tl-none shadow-sm space-y-3"
                   }`}
                 >
                   <p className="whitespace-pre-wrap">{m.content}</p>
 
                   {m.intent && (
-                    <div className="mt-2.5 p-3 rounded-xl bg-black/50 border border-brand-500/30 text-[11px] space-y-2.5">
-                      <div className="flex items-center justify-between border-b border-white/[0.08] pb-1.5">
-                        <div className="flex items-center gap-1.5 font-semibold text-white">
-                          <Globe className="h-3.5 w-3.5 text-brand-400" />
+                    <div className="mt-2.5 p-3 rounded-xl bg-elevated border border-accent-border text-[11px] space-y-2.5">
+                      <div className="flex items-center justify-between border-b border-line-subtle pb-1.5">
+                        <div className="flex items-center gap-1.5 font-semibold text-ink">
+                          <Globe className="h-3.5 w-3.5 text-accent-ink" />
                           <span>{m.intent.targetChain}</span>
                         </div>
-                        <span className="font-mono text-[10px] text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">
+                        <span className="font-mono text-[10px] text-info bg-info-soft px-1.5 py-0.5 rounded border border-info-border">
                           {m.intent.settlementExecution?.settlementRail || "Model A Solver"}
                         </span>
                       </div>
 
                       <div className="space-y-1 font-mono text-[10.5px]">
-                        <div className="flex justify-between text-slate-400">
+                        <div className="flex justify-between text-ink-muted">
                           <span>Payee:</span>
-                          <span className="text-white font-sans font-medium">{m.intent.resolvedPayee.displayName}</span>
+                          <span className="text-ink font-sans font-medium">{m.intent.resolvedPayee.displayName}</span>
                         </div>
-                        <div className="flex justify-between text-slate-400">
+                        <div className="flex justify-between text-ink-muted">
                           <span>Target Address:</span>
-                          <span className="text-slate-300 truncate max-w-[140px]">
+                          <span className="text-ink-secondary truncate max-w-[140px]">
                             {m.intent.resolvedPayee.targetChainAddress}
                           </span>
                         </div>
-                        <div className="flex justify-between text-slate-400">
+                        <div className="flex justify-between text-ink-muted">
                           <span>Settlement Sum:</span>
-                          <span className="text-emerald-400 font-bold font-sans">
+                          <span className="text-success font-bold font-sans">
                             ${m.intent.extractedAmount.toFixed(2)} {m.intent.extractedCurrency}
                           </span>
                         </div>
-                        <div className="flex justify-between text-slate-400">
+                        <div className="flex justify-between text-ink-muted">
                           <span>CoP Status:</span>
-                          <span className={m.intent.resolvedPayee.verificationStatus === "VERIFIED" ? "text-emerald-400" : "text-amber-400"}>
+                          <span className={m.intent.resolvedPayee.verificationStatus === "VERIFIED" ? "text-success" : "text-warning"}>
                             {m.intent.resolvedPayee.verificationStatus} ({m.intent.resolvedPayee.reputationScore}/100)
                           </span>
                         </div>
-                        <div className="flex justify-between text-slate-400">
+                        <div className="flex justify-between text-ink-muted">
                           <span>Guardrail:</span>
-                          <span className={m.intent.policyCheck?.autoExecutable ? "text-emerald-400" : "text-amber-400"}>
+                          <span className={m.intent.policyCheck?.autoExecutable ? "text-success" : "text-warning"}>
                             {m.intent.policyCheck?.autoExecutable ? "✓ Policy Approved" : "⚠ Sign-off Required"}
                           </span>
                         </div>
 
                         {isConnected && balance && (
-                          <div className="flex justify-between text-slate-400">
+                          <div className="flex justify-between text-ink-muted">
                             <span>Wallet Balance:</span>
-                            <span className={m.intent.extractedAmount > parseFloat(balance) ? "text-rose-400 font-bold" : "text-slate-300"}>
+                            <span className={m.intent.extractedAmount > parseFloat(balance) ? "text-danger font-bold" : "text-ink-secondary"}>
                               {balance} NEAR {m.intent.extractedAmount > parseFloat(balance) ? "(Insufficient)" : ""}
                             </span>
                           </div>
@@ -516,7 +520,7 @@ export function FloatingCopilot() {
                           <button
                             type="button"
                             onClick={connect}
-                            className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow-md shadow-brand-600/20 transition-all active:scale-[0.98]"
+                            className="btn-primary w-full py-2.5 px-3 rounded-xl text-xs"
                           >
                             <Wallet className="h-3.5 w-3.5" />
                             <span>Connect NEAR Wallet to Pay</span>
@@ -525,9 +529,9 @@ export function FloatingCopilot() {
                           <button
                             type="button"
                             disabled
-                            className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white/[0.04] text-slate-500 border border-white/[0.08] cursor-not-allowed text-xs font-semibold"
+                            className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-subtle text-ink-subtle border border-line-subtle cursor-not-allowed text-xs font-semibold"
                           >
-                            <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                            <AlertTriangle className="h-3.5 w-3.5 text-warning" />
                             <span>Insufficient Balance ({balance} NEAR)</span>
                           </button>
                         ) : (
@@ -535,7 +539,7 @@ export function FloatingCopilot() {
                             type="button"
                             disabled={Boolean(payingIntentId)}
                             onClick={() => handleExecuteInChatPayment(m.intent)}
-                            className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-xs shadow-md shadow-emerald-500/25 transition-all active:scale-[0.98]"
+                            className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-xs shadow-sm transition-all active:scale-[0.98] focus-ring"
                           >
                             {payingIntentId ? (
                               <>
@@ -544,7 +548,7 @@ export function FloatingCopilot() {
                               </>
                             ) : (
                               <>
-                                <Zap className="h-3.5 w-3.5 text-amber-300 fill-amber-300" />
+                                <Zap className="h-3.5 w-3.5 text-amber-200 fill-amber-200" />
                                 <span>Sign &amp; Pay in Chat (${m.intent.extractedAmount.toFixed(2)})</span>
                               </>
                             )}
@@ -555,12 +559,12 @@ export function FloatingCopilot() {
                           <button
                             type="button"
                             onClick={() => handleApplyAndPay(m.intent)}
-                            className="text-slate-400 hover:text-white inline-flex items-center gap-1 transition-colors group"
+                            className="text-ink-muted hover:text-ink inline-flex items-center gap-1 transition-colors group rounded focus-ring"
                           >
                             <span>Review in terminal</span>
                             <ArrowUpRight className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                           </button>
-                          <span className="text-[10px] text-slate-500 font-mono">Non-custodial</span>
+                          <span className="text-[10px] text-ink-subtle font-mono">Non-custodial</span>
                         </div>
                       </div>
                     </div>
@@ -568,41 +572,41 @@ export function FloatingCopilot() {
 
                   {/* On-Chain Payment Receipt Card */}
                   {m.receipt && (
-                    <div className="mt-2.5 p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-[11px] space-y-2">
-                      <div className="flex items-center justify-between border-b border-emerald-500/20 pb-1.5">
-                        <div className="flex items-center gap-1.5 font-semibold text-emerald-300">
-                          <Check className="h-3.5 w-3.5 text-emerald-400" />
+                    <div className="mt-2.5 p-3 rounded-xl bg-success-soft border border-success-border text-[11px] space-y-2">
+                      <div className="flex items-center justify-between border-b border-success-border pb-1.5">
+                        <div className="flex items-center gap-1.5 font-semibold text-success">
+                          <Check className="h-3.5 w-3.5 text-success" />
                           <span>Payment Finalized</span>
                         </div>
-                        <span className="font-mono text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                        <span className="font-mono text-[9px] text-success bg-elevated px-1.5 py-0.5 rounded border border-success-border">
                           On-Chain Verified
                         </span>
                       </div>
                       <div className="space-y-1 font-mono text-[10.5px]">
-                        <div className="flex justify-between text-slate-400">
+                        <div className="flex justify-between text-ink-muted">
                           <span>Amount:</span>
-                          <span className="text-white font-sans font-bold">
+                          <span className="text-ink font-sans font-bold">
                             {m.receipt.amount} {m.receipt.currency}
                           </span>
                         </div>
-                        <div className="flex justify-between text-slate-400">
+                        <div className="flex justify-between text-ink-muted">
                           <span>Beneficiary:</span>
-                          <span className="text-slate-200">{m.receipt.payee}</span>
+                          <span className="text-ink-secondary">{m.receipt.payee}</span>
                         </div>
-                        <div className="flex justify-between text-slate-400">
+                        <div className="flex justify-between text-ink-muted">
                           <span>Chain:</span>
-                          <span className="text-slate-200">{m.receipt.chain}</span>
+                          <span className="text-ink-secondary">{m.receipt.chain}</span>
                         </div>
-                        <div className="flex justify-between text-slate-400">
+                        <div className="flex justify-between text-ink-muted">
                           <span>Tx Hash:</span>
-                          <span className="text-slate-300 truncate max-w-[130px]">{m.receipt.txHash}</span>
+                          <span className="text-ink-secondary truncate max-w-[130px]">{m.receipt.txHash}</span>
                         </div>
                       </div>
                       <a
                         href={`${NEAR_CONFIG.explorerUrl}/txns/${m.receipt.txHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1.5 w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-[10.5px] font-medium transition-all"
+                        className="mt-1.5 w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-elevated hover:bg-subtle border border-success-border text-success text-[10.5px] font-medium transition-all focus-ring"
                       >
                         <span>View on NearBlocks Explorer</span>
                         <ExternalLink className="h-3 w-3" />
@@ -614,8 +618,8 @@ export function FloatingCopilot() {
             ))}
 
             {loading && (
-              <div className="flex items-center gap-2 text-xs text-slate-400 pl-9">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-400" />
+              <div className="flex items-center gap-2 text-xs text-ink-muted pl-9">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-accent-ink" />
                 <span className="italic">AI Copilot is thinking...</span>
               </div>
             )}
@@ -623,13 +627,14 @@ export function FloatingCopilot() {
           </div>
 
           {/* Quick Prompt Chips */}
-          <div className="px-3 py-2 border-t border-navy-800/80 bg-navy-950/40">
+          <div className="px-3 py-2 border-t border-line-subtle bg-inset">
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
               {samplePrompts.map((p) => (
                 <button
                   key={p}
+                  type="button"
                   onClick={() => handleSend(p)}
-                  className="whitespace-nowrap text-[10px] px-2.5 py-1 rounded-full bg-navy-900 text-slate-300 hover:text-white hover:bg-navy-800 border border-navy-800 hover:border-brand-500/40 transition-colors"
+                  className="whitespace-nowrap text-[10px] px-2.5 py-1 rounded-full bg-elevated text-ink-secondary hover:text-ink hover:bg-hover border border-line-subtle hover:border-accent-border transition-colors focus-ring"
                 >
                   {p}
                 </button>
@@ -643,19 +648,21 @@ export function FloatingCopilot() {
               e.preventDefault();
               handleSend();
             }}
-            className="p-3 border-t border-navy-800 bg-navy-950/90 flex items-center gap-2"
+            className="p-3 border-t border-line-subtle bg-inset flex items-center gap-2"
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask PaySure AI a question..."
-              className="flex-1 bg-navy-900 border border-navy-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+              aria-label="Ask PaySure AI a question"
+              className="input-field flex-1 px-3.5 py-2 text-xs"
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white shadow-md shadow-brand-600/30 transition-all shrink-0"
+              aria-label="Send message"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-40 text-white shadow-sm transition-all shrink-0 focus-ring"
             >
               <Send className="h-3.5 w-3.5" />
             </button>
@@ -665,32 +672,34 @@ export function FloatingCopilot() {
 
       {/* 3. The Dock Launcher Button */}
       <button
+        type="button"
         onClick={() => {
           setIsOpen(!isOpen);
           setShowTeaser(false);
         }}
-        className={`group flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border shadow-xl transition-all duration-200 ${
+        aria-expanded={isOpen}
+        className={`group flex items-center gap-2 px-3.5 py-2.5 rounded-2xl border shadow-popover transition-all duration-200 focus-ring ${
           isOpen
-            ? "bg-navy-800 border-navy-700 text-white"
-            : "bg-navy-900 hover:bg-navy-850 border-navy-750 hover:border-brand-500/40 text-slate-200 hover:text-white"
+            ? "bg-subtle border-line-strong text-ink"
+            : "bg-elevated hover:bg-subtle border-line hover:border-accent-border text-ink"
         }`}
         title="Toggle Copilot"
       >
-        <div className="flex items-center justify-center p-1.5 rounded-xl bg-navy-800 text-brand-400 border border-navy-700">
+        <div className="flex items-center justify-center p-1.5 rounded-xl bg-accent-soft text-accent-ink border border-accent-border">
           <MessageSquare className="h-4 w-4" />
         </div>
 
         <div className="text-left">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-semibold text-white tracking-tight">Support Copilot</span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-navy-800 text-slate-400 border border-navy-700">
+            <span className="text-xs font-semibold text-ink tracking-tight">Support Copilot</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-subtle text-ink-muted border border-line-subtle">
               Online
             </span>
           </div>
         </div>
 
         {isOpen && (
-          <ChevronDown className="h-3.5 w-3.5 text-slate-400 ml-1" />
+          <ChevronDown className="h-3.5 w-3.5 text-ink-muted ml-1" />
         )}
       </button>
     </div>

@@ -15,8 +15,17 @@ export function ThemeToggle() {
         setOpen(false);
       }
     }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   const options: { label: string; value: Theme; icon: typeof Sun }[] = [
@@ -30,33 +39,42 @@ export function ThemeToggle() {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        title={`Current theme: ${theme} (${resolvedTheme})`}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white transition-all shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={`Appearance theme: ${theme}`}
+        title={`Theme: ${theme} (${resolvedTheme})`}
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-subtle hover:bg-hover border border-line-subtle text-ink-secondary hover:text-ink transition-all focus-ring"
       >
         {resolvedTheme === "light" ? (
-          <Sun className="h-4 w-4 text-amber-500 transition-transform" />
+          <Sun className="h-4 w-4 text-warning transition-transform" />
         ) : (
-          <Moon className="h-4 w-4 text-brand-400 transition-transform" />
+          <Moon className="h-4 w-4 text-accent-ink transition-transform" />
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-36 rounded-2xl bg-[#0A0D14]/95 border border-white/[0.1] p-1.5 shadow-2xl backdrop-blur-2xl z-50 text-xs">
+        <div
+          role="menu"
+          aria-label="Theme options"
+          className="absolute right-0 mt-2 w-36 rounded-2xl bg-elevated/95 border border-line p-1.5 shadow-popover backdrop-blur-2xl z-50 text-xs"
+        >
           {options.map((opt) => {
             const Icon = opt.icon;
             const isSelected = theme === opt.value;
             return (
               <button
                 key={opt.value}
+                role="menuitemradio"
+                aria-checked={isSelected}
                 type="button"
                 onClick={() => {
                   setTheme(opt.value);
                   setOpen(false);
                 }}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl transition-all ${
+                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-all focus-ring ${
                   isSelected
-                    ? "bg-brand-600 text-white font-medium"
-                    : "text-slate-300 hover:text-white hover:bg-white/[0.06]"
+                    ? "bg-accent text-white font-medium"
+                    : "text-ink-secondary hover:text-ink hover:bg-hover"
                 }`}
               >
                 <div className="flex items-center gap-2">

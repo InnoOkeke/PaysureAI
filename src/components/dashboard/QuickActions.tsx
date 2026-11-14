@@ -33,9 +33,9 @@ export function QuickActions() {
   ];
 
   return (
-    <div className="rounded-2xl bg-navy-900/70 border border-white/[0.08] p-6">
+    <div className="surface-card p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
           Quick Actions
         </h3>
       </div>
@@ -46,27 +46,27 @@ export function QuickActions() {
             <Link
               key={act.title}
               href={act.href}
-              className={`p-5 rounded-xl border transition-all flex flex-col justify-between group ${
+              className={`p-5 rounded-xl border transition-all flex flex-col justify-between group focus-ring ${
                 act.primary
-                  ? "bg-brand-600/15 border-brand-500/35 hover:border-brand-400/60 hover:bg-brand-600/20 text-white"
-                  : "bg-navy-950/70 border-white/[0.07] hover:border-white/[0.16] hover:bg-navy-950 text-slate-200"
+                  ? "bg-accent-soft border-accent-border hover:border-accent text-ink"
+                  : "bg-inset border-line-subtle hover:border-line-strong hover:bg-subtle text-ink"
               }`}
             >
               <div className="flex items-center justify-between mb-4">
                 <div
                   className={`h-9 w-9 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105 ${
                     act.primary
-                      ? "bg-brand-600 text-white shadow-sm shadow-brand-600/30"
-                      : "bg-white/[0.05] text-brand-400 border border-white/[0.08]"
+                      ? "bg-accent text-white shadow-sm"
+                      : "bg-subtle text-accent-ink border border-line-subtle"
                   }`}
                 >
                   <Icon className="h-4 w-4" />
                 </div>
-                <ArrowUpRight className="h-4 w-4 text-slate-500 group-hover:text-white transition-colors" />
+                <ArrowUpRight className="h-4 w-4 text-ink-subtle group-hover:text-ink transition-colors" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-white tracking-tight">{act.title}</h4>
-                <p className="text-xs text-slate-400 mt-1 leading-relaxed">{act.description}</p>
+                <h4 className="text-sm font-semibold text-ink tracking-tight">{act.title}</h4>
+                <p className="text-xs text-ink-muted mt-1 leading-relaxed">{act.description}</p>
               </div>
             </Link>
           );

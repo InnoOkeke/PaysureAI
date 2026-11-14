@@ -24,32 +24,28 @@ export function OverviewCards({
       value: `${formatCurrency(totalVolume)} NEAR`,
       sub: `${totalPaymentsCount} transactions settled`,
       icon: Send,
-      color: "text-brand-400",
-      bg: "bg-brand-500/10",
+      tone: "bg-accent-soft text-accent-ink border-accent-border",
     },
     {
       title: "Pending Invoices",
       value: `${pendingInvoicesCount}`,
       sub: `${formatCurrency(pendingVolume)} NEAR awaiting payment`,
       icon: FileText,
-      color: "text-amber-400",
-      bg: "bg-amber-500/10",
+      tone: "bg-warning-soft text-warning border-warning-border",
     },
     {
       title: "Verified Payees",
       value: `${verifiedRecipientsCount}`,
       sub: "Confirmation of Payee active",
       icon: ShieldCheck,
-      color: "text-emerald-400",
-      bg: "bg-emerald-500/10",
+      tone: "bg-success-soft text-success border-success-border",
     },
     {
       title: "Settlement Speed",
       value: "~1.1s",
       sub: "Sub-second finality on NEAR",
       icon: TrendingUp,
-      color: "text-brand-accent",
-      bg: "bg-cyan-500/10",
+      tone: "bg-info-soft text-info border-info-border",
     },
   ];
 
@@ -60,17 +56,23 @@ export function OverviewCards({
         return (
           <div
             key={card.title}
-            className="p-5 rounded-2xl bg-navy-900/70 border border-white/[0.08] flex flex-col justify-between"
+            className="p-5 surface-card flex flex-col justify-between"
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium text-slate-400 whitespace-nowrap">{card.title}</span>
-              <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${card.bg} ${card.color}`}>
+              <span className="text-xs font-medium text-ink-muted whitespace-nowrap">
+                {card.title}
+              </span>
+              <div
+                className={`h-8 w-8 rounded-lg border flex items-center justify-center shrink-0 ${card.tone}`}
+              >
                 <Icon className="h-4 w-4" />
               </div>
             </div>
             <div>
-              <p className="text-2xl font-bold tracking-tight text-white whitespace-nowrap">{card.value}</p>
-              <p className="mt-1 text-xs text-slate-400 truncate">{card.sub}</p>
+              <p className="text-2xl font-bold tracking-tight text-ink whitespace-nowrap">
+                {card.value}
+              </p>
+              <p className="mt-1 text-xs text-ink-muted truncate">{card.sub}</p>
             </div>
           </div>
         );

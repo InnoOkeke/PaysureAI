@@ -193,21 +193,21 @@ export default function TreasuryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050507] py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-canvas py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-navy-800">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-line-subtle">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-brand-400">
+            <span className="text-xs font-semibold uppercase tracking-wider text-accent-ink">
               AI Security, SputnikDAO &amp; OutLayer
             </span>
-            <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
-            <span className="text-xs text-slate-400">Institutional Governance</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-ink-subtle" />
+            <span className="text-xs text-ink-muted">Institutional Governance</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight">
             Treasury Guardrails &amp; Security Policy Engine
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-ink-muted mt-1">
             Control AI spending with cryptographic limits, SputnikDAO / Trezu multi-sig escalation, and OutLayer agent attestation.
           </p>
         </div>
@@ -215,13 +215,13 @@ export default function TreasuryPage() {
         {/* Emergency Killswitch Toggle */}
         <button
           onClick={handleKillswitch}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg ${
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all focus-ring ${
             killswitch
-              ? "bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30 animate-pulse"
-              : "bg-navy-900 hover:bg-navy-850 text-slate-300 border border-navy-800"
+              ? "bg-danger hover:bg-danger/90 text-white shadow-surface animate-pulse"
+              : "btn-secondary text-ink-secondary"
           }`}
         >
-          <Zap className={`h-4 w-4 ${killswitch ? "text-white" : "text-amber-400"}`} />
+          <Zap className={`h-4 w-4 ${killswitch ? "text-white" : "text-warning"}`} />
           <span>{killswitch ? "EMERGENCY FREEZE ENGAGED" : "Arm Killswitch"}</span>
         </button>
       </div>
@@ -229,29 +229,29 @@ export default function TreasuryPage() {
       {/* Partner Ecosystem Integration Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* SputnikDAO / Trezu */}
-        <div className="p-5 rounded-2xl bg-navy-900/80 border border-navy-800 flex flex-col justify-between">
+        <div className="surface-card p-5 rounded-2xl flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Multi-Sig Council</span>
-              <span className="text-[10px] font-mono font-bold text-brand-300 bg-brand-500/10 px-2 py-0.5 rounded-full border border-brand-500/20">
+              <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Multi-Sig Council</span>
+              <span className="text-[10px] font-mono font-bold text-accent-ink bg-accent-soft px-2 py-0.5 rounded-full border border-accent-border">
                 SputnikDAO v2
               </span>
             </div>
-            <h4 className="text-sm font-bold text-white">Trezu &amp; SputnikDAO Escalation</h4>
-            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Payments &gt; ${maxSingleTx} bypass automated agent execution and trigger an on-chain proposal to <code className="text-brand-300 font-mono text-[11px]">{DEFAULT_SPUTNIK_DAO}</code>.
+            <h4 className="text-sm font-bold text-ink">Trezu &amp; SputnikDAO Escalation</h4>
+            <p className="text-xs text-ink-muted mt-1 leading-relaxed">
+              Payments &gt; ${maxSingleTx} bypass automated agent execution and trigger an on-chain proposal to <code className="text-accent-ink font-mono text-[11px]">{DEFAULT_SPUTNIK_DAO}</code>.
             </p>
           </div>
-          <div className="mt-4 pt-3 border-t border-navy-800/80">
+          <div className="mt-4 pt-3 border-t border-line-subtle">
             <button
               onClick={handleTestSputnikProposal}
-              className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-brand-600/15 hover:bg-brand-600/25 text-brand-300 text-xs font-semibold border border-brand-500/30 transition-all"
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-accent-soft hover:bg-accent/15 text-accent-ink text-xs font-semibold border border-accent-border transition-all focus-ring"
             >
               <span>Test SputnikDAO Proposal Crafting</span>
               <ArrowRight className="h-3 w-3" />
             </button>
             {sputnikSuccess && (
-              <p className="mt-2 text-[10px] text-emerald-400 font-mono bg-emerald-950/30 p-2 rounded border border-emerald-500/30">
+              <p className="mt-2 text-[10px] text-success font-mono bg-success-soft p-2 rounded border border-success-border">
                 ✓ {sputnikSuccess}
               </p>
             )}
@@ -259,44 +259,44 @@ export default function TreasuryPage() {
         </div>
 
         {/* OutLayer Agent Security */}
-        <div className="p-5 rounded-2xl bg-navy-900/80 border border-navy-800 flex flex-col justify-between">
+        <div className="surface-card p-5 rounded-2xl flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Agent Guardrails</span>
-              <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Agent Guardrails</span>
+              <span className="text-[10px] font-mono font-bold text-success bg-success-soft px-2 py-0.5 rounded-full border border-success-border">
                 OutLayer Active
               </span>
             </div>
-            <h4 className="text-sm font-bold text-white">OutLayer Security Attestation</h4>
-            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+            <h4 className="text-sm font-bold text-ink">OutLayer Security Attestation</h4>
+            <p className="text-xs text-ink-muted mt-1 leading-relaxed">
               Every invoice intent and disbursement is evaluated against OutLayer agent policies, anti-spoofing lookalike filters, and prompt-injection firewalls.
             </p>
           </div>
-          <div className="mt-4 pt-3 border-t border-navy-800/80 flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-400">Agent Defense:</span>
-            <span className="text-emerald-400 font-bold">100% Attested</span>
+          <div className="mt-4 pt-3 border-t border-line-subtle flex items-center justify-between text-xs font-mono">
+            <span className="text-ink-muted">Agent Defense:</span>
+            <span className="text-success font-bold">100% Attested</span>
           </div>
         </div>
 
         {/* NEAR.AI & Agent Market */}
-        <div className="p-5 rounded-2xl bg-navy-900/80 border border-navy-800 flex flex-col justify-between">
+        <div className="surface-card p-5 rounded-2xl flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Inference &amp; Swarms</span>
-              <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
+              <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Inference &amp; Swarms</span>
+              <span className="text-[10px] font-mono font-bold text-info bg-info-soft px-2 py-0.5 rounded-full border border-info-border">
                 NEAR.AI Cloud
               </span>
             </div>
-            <h4 className="text-sm font-bold text-white">NEAR.AI Cloud &amp; Agent Market</h4>
-            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Invoice parsing runs on NEAR.AI (<code className="text-cyan-300 font-mono text-[11px]">api.near.ai</code>). PaySure AI is registered on Agent Market with full MCP support.
+            <h4 className="text-sm font-bold text-ink">NEAR.AI Cloud &amp; Agent Market</h4>
+            <p className="text-xs text-ink-muted mt-1 leading-relaxed">
+              Invoice parsing runs on NEAR.AI (<code className="text-info font-mono text-[11px]">api.near.ai</code>). PaySure AI is registered on Agent Market with full MCP support.
             </p>
           </div>
-          <div className="mt-4 pt-3 border-t border-navy-800/80 flex items-center justify-between text-xs">
+          <div className="mt-4 pt-3 border-t border-line-subtle flex items-center justify-between text-xs">
             <a
               href="/api/agent"
               target="_blank"
-              className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 flex items-center gap-1 text-[11px]"
+              className="text-info hover:underline underline-offset-2 flex items-center gap-1 text-[11px] focus-ring rounded"
             >
               <span>View Agent Manifest</span>
               <ExternalLink className="h-3 w-3" />
@@ -304,7 +304,7 @@ export default function TreasuryPage() {
             <a
               href="/api/agent/mcp"
               target="_blank"
-              className="text-slate-400 hover:text-white underline underline-offset-2 flex items-center gap-1 text-[11px]"
+              className="text-ink-muted hover:text-ink underline underline-offset-2 flex items-center gap-1 text-[11px] focus-ring rounded"
             >
               <span>MCP Spec</span>
               <ExternalLink className="h-3 w-3" />
@@ -316,27 +316,27 @@ export default function TreasuryPage() {
       {/* 1. Velocity & Active Status Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* 24h Velocity Meter */}
-        <div className="p-5 rounded-2xl bg-navy-900/80 border border-navy-800 shadow-md">
+        <div className="surface-card p-5 rounded-2xl">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-400">24-Hour Velocity Meter</span>
-            <Activity className="h-4 w-4 text-brand-400" />
+            <span className="text-xs font-medium text-ink-muted">24-Hour Velocity Meter</span>
+            <Activity className="h-4 w-4 text-accent-ink" />
           </div>
-          <p className="text-2xl font-extrabold text-white font-mono">
-            ${spentTodayUSD.toFixed(2)} <span className="text-xs font-normal text-slate-400">/ ${dailyCap} USD</span>
+          <p className="text-2xl font-extrabold text-ink font-mono">
+            ${spentTodayUSD.toFixed(2)} <span className="text-xs font-normal text-ink-muted">/ ${dailyCap} USD</span>
           </p>
-          <div className="mt-3 w-full bg-navy-950 h-2 rounded-full overflow-hidden">
+          <div className="mt-3 w-full bg-subtle h-2 rounded-full overflow-hidden">
             <div
               className={`h-full transition-all duration-500 ${
                 velocityPercentage > 85
-                  ? "bg-rose-500"
+                  ? "bg-danger"
                   : velocityPercentage > 60
-                  ? "bg-amber-500"
-                  : "bg-brand-500"
+                  ? "bg-warning"
+                  : "bg-accent"
               }`}
               style={{ width: `${velocityPercentage}%` }}
             />
           </div>
-          <p className="mt-2 text-[11px] text-slate-400">
+          <p className="mt-2 text-[11px] text-ink-muted">
             {policyLoading
               ? "Syncing rolling 24h velocity from the backend..."
               : `${velocityPercentage}% of daily velocity cap utilized. Rolling 24h window.`}
@@ -344,47 +344,47 @@ export default function TreasuryPage() {
         </div>
 
         {/* Autonomous Single Tx Limit */}
-        <div className="p-5 rounded-2xl bg-navy-900/80 border border-navy-800 shadow-md">
+        <div className="surface-card p-5 rounded-2xl">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-400">Single-Tx Cap</span>
-            <Lock className="h-4 w-4 text-emerald-400" />
+            <span className="text-xs font-medium text-ink-muted">Single-Tx Cap</span>
+            <Lock className="h-4 w-4 text-success" />
           </div>
-          <p className="text-2xl font-extrabold text-white font-mono">${maxSingleTx}.00 USD</p>
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="text-2xl font-extrabold text-ink font-mono">${maxSingleTx}.00 USD</p>
+          <p className="mt-3 text-xs text-ink-muted">
             Transactions exceeding this cap require SputnikDAO council multi-sig approval.
           </p>
         </div>
 
         {/* Auto-Approval Ceiling */}
-        <div className="p-5 rounded-2xl bg-navy-900/80 border border-navy-800 shadow-md">
+        <div className="surface-card p-5 rounded-2xl">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-slate-400">Auto-Approval Threshold</span>
-            <Zap className="h-4 w-4 text-brand-accent" />
+            <span className="text-xs font-medium text-ink-muted">Auto-Approval Threshold</span>
+            <Zap className="h-4 w-4 text-info" />
           </div>
-          <p className="text-2xl font-extrabold text-emerald-400 font-mono">&le; ${autoApproveUnder}.00 USD</p>
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="text-2xl font-extrabold text-success font-mono">&le; ${autoApproveUnder}.00 USD</p>
+          <p className="mt-3 text-xs text-ink-muted">
             Instant execution for counterparties with reputation score &ge; 80 and zero anomalies.
           </p>
         </div>
       </div>
 
       {/* 2. Policy Threshold Customization Form */}
-      <div className="rounded-2xl bg-navy-900/80 border border-navy-800 p-6 sm:p-8 shadow-xl">
-        <div className="flex items-center justify-between pb-4 mb-6 border-b border-navy-800">
+      <div className="surface-card rounded-2xl p-6 sm:p-8">
+        <div className="flex items-center justify-between pb-4 mb-6 border-b border-line-subtle">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-brand-500/10 text-brand-400">
+            <div className="p-2 rounded-xl bg-accent-soft text-accent-ink">
               <Sliders className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Policy Parameter Sliders</h3>
-              <p className="text-xs text-slate-400">Adjust on-chain guardrails enforced on automated agent disbursements</p>
+              <h3 className="text-base font-bold text-ink">Policy Parameter Sliders</h3>
+              <p className="text-xs text-ink-muted">Adjust on-chain guardrails enforced on automated agent disbursements</p>
             </div>
           </div>
         </div>
 
         {policyError && (
-          <div className="mb-5 p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
+          <div className="mb-5 p-3.5 rounded-xl bg-danger-soft border border-danger-border text-danger text-xs flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-danger" />
             <span>{policyError}</span>
           </div>
         )}
@@ -392,10 +392,10 @@ export default function TreasuryPage() {
         <form onSubmit={handleSave} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Max Single Tx */}
-            <div className="space-y-2 p-4 rounded-xl bg-navy-950/60 border border-navy-800">
+            <div className="surface-inset space-y-2 p-4 rounded-xl">
               <div className="flex justify-between items-center text-xs">
-                <label className="font-semibold text-slate-300">Max Single Tx Cap</label>
-                <span className="font-mono text-brand-300 font-bold">${maxSingleTx} USD</span>
+                <label className="font-semibold text-ink-secondary">Max Single Tx Cap</label>
+                <span className="font-mono text-accent-ink font-bold">${maxSingleTx} USD</span>
               </div>
               <input
                 type="range"
@@ -404,16 +404,16 @@ export default function TreasuryPage() {
                 step="50"
                 value={maxSingleTx}
                 onChange={(e) => setMaxSingleTx(Number(e.target.value))}
-                className="w-full accent-brand-500 cursor-pointer"
+                className="w-full accent-accent cursor-pointer"
               />
-              <p className="text-[11px] text-slate-500">Above this ceiling, transactions escalate to SputnikDAO multi-sig.</p>
+              <p className="text-[11px] text-ink-subtle">Above this ceiling, transactions escalate to SputnikDAO multi-sig.</p>
             </div>
 
             {/* Daily Velocity Cap */}
-            <div className="space-y-2 p-4 rounded-xl bg-navy-950/60 border border-navy-800">
+            <div className="surface-inset space-y-2 p-4 rounded-xl">
               <div className="flex justify-between items-center text-xs">
-                <label className="font-semibold text-slate-300">24h Velocity Ceiling</label>
-                <span className="font-mono text-brand-300 font-bold">${dailyCap} USD</span>
+                <label className="font-semibold text-ink-secondary">24h Velocity Ceiling</label>
+                <span className="font-mono text-accent-ink font-bold">${dailyCap} USD</span>
               </div>
               <input
                 type="range"
@@ -422,16 +422,16 @@ export default function TreasuryPage() {
                 step="250"
                 value={dailyCap}
                 onChange={(e) => setDailyCap(Number(e.target.value))}
-                className="w-full accent-brand-500 cursor-pointer"
+                className="w-full accent-accent cursor-pointer"
               />
-              <p className="text-[11px] text-slate-500">Max cumulative volume permitted within a rolling 24-hour cycle.</p>
+              <p className="text-[11px] text-ink-subtle">Max cumulative volume permitted within a rolling 24-hour cycle.</p>
             </div>
 
             {/* Auto-Approval Ceiling */}
-            <div className="space-y-2 p-4 rounded-xl bg-navy-950/60 border border-navy-800">
+            <div className="surface-inset space-y-2 p-4 rounded-xl">
               <div className="flex justify-between items-center text-xs">
-                <label className="font-semibold text-slate-300">Auto-Approval Ceiling</label>
-                <span className="font-mono text-emerald-400 font-bold">&le; ${autoApproveUnder} USD</span>
+                <label className="font-semibold text-ink-secondary">Auto-Approval Ceiling</label>
+                <span className="font-mono text-success font-bold">&le; ${autoApproveUnder} USD</span>
               </div>
               <input
                 type="range"
@@ -442,24 +442,24 @@ export default function TreasuryPage() {
                 onChange={(e) => setAutoApproveUnder(Number(e.target.value))}
                 className="w-full accent-emerald-500 cursor-pointer"
               />
-              <p className="text-[11px] text-slate-500">Payments below this threshold execute without human waiting latency.</p>
+              <p className="text-[11px] text-ink-subtle">Payments below this threshold execute without human waiting latency.</p>
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-2 gap-3">
-            <span className="text-xs text-slate-400 font-mono">
+            <span className="text-xs text-ink-muted font-mono">
               {accountId ? (
                 <>
-                  Account: <strong className="text-brand-300">{accountId}</strong>
+                  Account: <strong className="text-accent-ink">{accountId}</strong>
                 </>
               ) : (
-                <span className="text-amber-300">Connect wallet to persist policy</span>
+                <span className="text-warning">Connect wallet to persist policy</span>
               )}
             </span>
             <button
               type="submit"
               disabled={savingPolicy}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-brand-600/25 transition-all"
+              className="btn-primary flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs focus-ring"
             >
               <Save className="h-4 w-4" />
               <span>
@@ -475,64 +475,64 @@ export default function TreasuryPage() {
       </div>
 
       {/* 3. Real-Time Autonomous Rules Table */}
-      <div className="rounded-2xl bg-navy-900/80 border border-navy-800 p-6 sm:p-8 shadow-xl space-y-4">
-        <div className="flex items-center justify-between pb-4 border-b border-navy-800">
+      <div className="surface-card rounded-2xl p-6 sm:p-8 space-y-4">
+        <div className="flex items-center justify-between pb-4 border-b border-line-subtle">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+            <div className="p-2 rounded-xl bg-success-soft text-success">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Autonomous Agent Decision Rules</h3>
-              <p className="text-xs text-slate-400">Rule hierarchy evaluated before signing any transaction</p>
+              <h3 className="text-base font-bold text-ink">Autonomous Agent Decision Rules</h3>
+              <p className="text-xs text-ink-muted">Rule hierarchy evaluated before signing any transaction</p>
             </div>
           </div>
-          <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+          <span className="text-xs font-mono text-success bg-success-soft px-2.5 py-1 rounded-full border border-success-border">
             ZERO-TRUST ACTIVE
           </span>
         </div>
 
         <div className="space-y-3 text-xs">
-          <div className="p-4 rounded-xl bg-navy-950/80 border border-navy-800 flex items-start justify-between gap-3">
+          <div className="surface-inset p-4 rounded-xl flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+              <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold text-white">Rule 1: Autonomous Micro-Payment Execution</p>
-                <p className="text-slate-300 mt-0.5">
-                  IF <span className="text-emerald-400 font-mono">Payee == VERIFIED</span> AND <span className="text-emerald-400 font-mono">Reputation &ge; 80</span> AND <span className="text-emerald-400 font-mono">Amount &le; ${autoApproveUnder}</span> &rarr; Instant execution without human signoff.
+                <p className="font-bold text-ink">Rule 1: Autonomous Micro-Payment Execution</p>
+                <p className="text-ink-secondary mt-0.5">
+                  IF <span className="text-success font-mono">Payee == VERIFIED</span> AND <span className="text-success font-mono">Reputation &ge; 80</span> AND <span className="text-success font-mono">Amount &le; ${autoApproveUnder}</span> &rarr; Instant execution without human signoff.
                 </p>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[10px] font-bold">
+            <span className="px-2 py-0.5 rounded bg-success-soft text-success border border-success-border font-mono text-[10px] font-bold">
               PASS
             </span>
           </div>
 
-          <div className="p-4 rounded-xl bg-navy-950/80 border border-amber-500/30 flex items-start justify-between gap-3">
+          <div className="surface-inset p-4 rounded-xl !border-warning-border flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold text-white">Rule 2: SputnikDAO / Trezu Escalation Protocol</p>
-                <p className="text-slate-300 mt-0.5">
-                  IF <span className="text-amber-400 font-mono">Amount &gt; ${maxSingleTx}</span> OR <span className="text-amber-400 font-mono">Payee == UNVERIFIED</span> &rarr; Halt autonomous execution and craft an on-chain proposal for SputnikDAO council vote.
+                <p className="font-bold text-ink">Rule 2: SputnikDAO / Trezu Escalation Protocol</p>
+                <p className="text-ink-secondary mt-0.5">
+                  IF <span className="text-warning font-mono">Amount &gt; ${maxSingleTx}</span> OR <span className="text-warning font-mono">Payee == UNVERIFIED</span> &rarr; Halt autonomous execution and craft an on-chain proposal for SputnikDAO council vote.
                 </p>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 font-mono text-[10px] font-bold">
+            <span className="px-2 py-0.5 rounded bg-warning-soft text-warning border border-warning-border font-mono text-[10px] font-bold">
               ESCALATED
             </span>
           </div>
 
-          <div className="p-4 rounded-xl bg-navy-950/80 border border-rose-500/30 flex items-start justify-between gap-3">
+          <div className="surface-inset p-4 rounded-xl !border-danger-border flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
-              <XCircle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+              <XCircle className="h-4 w-4 text-danger shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold text-white">Rule 3: OutLayer Anti-Poisoning &amp; Spoofing Defense</p>
-                <p className="text-slate-300 mt-0.5">
-                  IF <span className="text-rose-400 font-mono">Account Mismatch Detected</span> OR <span className="text-rose-400 font-mono">Adversarial Prompt Payload Found</span> &rarr; Immediate freeze, quarantine invoice, and log security incident.
+                <p className="font-bold text-ink">Rule 3: OutLayer Anti-Poisoning &amp; Spoofing Defense</p>
+                <p className="text-ink-secondary mt-0.5">
+                  IF <span className="text-danger font-mono">Account Mismatch Detected</span> OR <span className="text-danger font-mono">Adversarial Prompt Payload Found</span> &rarr; Immediate freeze, quarantine invoice, and log security incident.
                 </p>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 font-mono text-[10px] font-bold">
+            <span className="px-2 py-0.5 rounded bg-danger-soft text-danger border border-danger-border font-mono text-[10px] font-bold">
               FAIL-SAFE
             </span>
           </div>
@@ -540,18 +540,18 @@ export default function TreasuryPage() {
       </div>
 
       {/* 4. Counterparty Reputation & Trust Matrix */}
-      <div className="rounded-2xl bg-navy-900/80 border border-navy-800 p-6 sm:p-8 shadow-xl space-y-4">
-        <div className="flex items-center justify-between pb-4 border-b border-navy-800">
+      <div className="surface-card rounded-2xl p-6 sm:p-8 space-y-4">
+        <div className="flex items-center justify-between pb-4 border-b border-line-subtle">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400">
+            <div className="p-2 rounded-xl bg-info-soft text-info">
               <Users className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Counterparty Reputation &amp; Scam Defense Matrix</h3>
-              <p className="text-xs text-slate-400">Multi-chain counterparty trust scores computed from on-chain verification</p>
+              <h3 className="text-base font-bold text-ink">Counterparty Reputation &amp; Scam Defense Matrix</h3>
+              <p className="text-xs text-ink-muted">Multi-chain counterparty trust scores computed from on-chain verification</p>
             </div>
           </div>
-          <span className="text-xs font-mono text-slate-400">{reputationLeaderboard.length} Tracked Counterparties</span>
+          <span className="text-xs font-mono text-ink-muted">{reputationLeaderboard.length} Tracked Counterparties</span>
         </div>
 
         <div className="grid grid-cols-1 gap-3">
@@ -560,22 +560,22 @@ export default function TreasuryPage() {
             return (
               <div
                 key={c.account}
-                className="p-4 rounded-2xl bg-navy-950/70 dark:bg-navy-950/70 border border-navy-800 transition-all hover:border-navy-700"
+                className="surface-inset p-4 rounded-2xl transition-all hover:border-line-strong"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-sm font-bold text-white">{c.name}</span>
+                      <span className="text-sm font-bold text-ink">{c.name}</span>
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                           c.status === "VERIFIED"
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                            : "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                            ? "bg-success-soft text-success border-success-border"
+                            : "bg-danger-soft text-danger border-danger-border"
                         }`}
                       >
                         {c.status}
                       </span>
-                      <span className="text-[10px] font-mono text-slate-400 px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06]">
+                      <span className="text-[10px] font-mono text-ink-muted px-2 py-0.5 rounded-full bg-subtle border border-line-subtle">
                         {c.tier}
                       </span>
                     </div>
@@ -584,9 +584,10 @@ export default function TreasuryPage() {
                     <button
                       type="button"
                       onClick={() => setExpandedAccount(isExpanded ? null : c.account)}
-                      className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-white transition-colors pt-0.5"
+                      aria-expanded={isExpanded}
+                      className="inline-flex items-center gap-1.5 text-[11px] text-ink-muted hover:text-ink transition-colors pt-0.5 focus-ring rounded"
                     >
-                      <Info className="h-3 w-3 text-slate-400" />
+                      <Info className="h-3 w-3 text-ink-muted" />
                       <span>{isExpanded ? "Hide contract metadata" : "View route & metadata"}</span>
                       <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
                     </button>
@@ -594,14 +595,14 @@ export default function TreasuryPage() {
 
                   <div className="flex items-center justify-between sm:justify-end gap-5 shrink-0">
                     <div className="text-right">
-                      <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Trust Score</span>
+                      <span className="text-[10px] text-ink-muted uppercase tracking-wider block">Trust Score</span>
                       <span
                         className={`text-lg font-extrabold font-mono ${
                           c.reputationScore > 80
-                            ? "text-emerald-400"
+                            ? "text-success"
                             : c.reputationScore > 50
-                            ? "text-amber-400"
-                            : "text-rose-400"
+                            ? "text-warning"
+                            : "text-danger"
                         }`}
                       >
                         {c.reputationScore}/100
@@ -610,7 +611,7 @@ export default function TreasuryPage() {
 
                     <a
                       href={`/pay?recipient=${c.account}`}
-                      className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition-all shadow-md shadow-brand-600/20 active:scale-[0.98]"
+                      className="btn-primary px-4 py-2 rounded-xl text-xs focus-ring"
                     >
                       Pay
                     </a>
@@ -619,18 +620,18 @@ export default function TreasuryPage() {
 
                 {/* Expanded Technical Metadata Popover / Drawer */}
                 {isExpanded && (
-                  <div className="mt-3.5 pt-3.5 border-t border-white/[0.06] grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono bg-black/25 dark:bg-black/25 p-3 rounded-xl border border-white/[0.05] animate-in fade-in duration-150">
+                  <div className="mt-3.5 pt-3.5 border-t border-line-subtle grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono bg-elevated p-3 rounded-xl border border-line-subtle animate-in fade-in duration-150">
                     <div>
-                      <span className="block text-[10px] text-slate-500 uppercase font-sans font-semibold">NEAR Identity</span>
-                      <span className="text-white text-[11px] truncate block">{c.account}</span>
+                      <span className="block text-[10px] text-ink-subtle uppercase font-sans font-semibold">NEAR Identity</span>
+                      <span className="text-ink text-[11px] truncate block">{c.account}</span>
                     </div>
                     <div>
-                      <span className="block text-[10px] text-slate-500 uppercase font-sans font-semibold">Cross-Chain Route</span>
-                      <span className="text-slate-300 text-[11px] truncate block">{c.evm}</span>
+                      <span className="block text-[10px] text-ink-subtle uppercase font-sans font-semibold">Cross-Chain Route</span>
+                      <span className="text-ink-secondary text-[11px] truncate block">{c.evm}</span>
                     </div>
                     <div>
-                      <span className="block text-[10px] text-slate-500 uppercase font-sans font-semibold">Verified Settlements</span>
-                      <span className="text-emerald-400 font-bold text-[11px]">{c.settledCount} Transactions</span>
+                      <span className="block text-[10px] text-ink-subtle uppercase font-sans font-semibold">Verified Settlements</span>
+                      <span className="text-success font-bold text-[11px]">{c.settledCount} Transactions</span>
                     </div>
                   </div>
                 )}

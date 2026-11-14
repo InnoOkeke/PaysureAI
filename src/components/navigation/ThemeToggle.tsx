@@ -31,7 +31,7 @@ export function ThemeToggle() {
         type="button"
         onClick={() => setOpen(!open)}
         title={`Current theme: ${theme} (${resolvedTheme})`}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.04] hover:bg-white/[0.08] dark:bg-white/[0.04] dark:hover:bg-white/[0.08] border border-white/[0.08] dark:border-white/[0.08] text-slate-300 hover:text-white transition-all shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-slate-300 hover:text-white transition-all shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
       >
         {resolvedTheme === "light" ? (
           <Sun className="h-4 w-4 text-amber-500 transition-transform" />
@@ -41,7 +41,7 @@ export function ThemeToggle() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-36 rounded-2xl bg-[#0A0D14]/95 dark:bg-[#0A0D14]/95 border border-white/[0.1] dark:border-white/[0.1] p-1.5 shadow-2xl backdrop-blur-2xl z-50 text-xs">
+        <div className="absolute right-0 mt-2 w-36 rounded-2xl bg-[#0A0D14]/95 border border-white/[0.1] p-1.5 shadow-2xl backdrop-blur-2xl z-50 text-xs">
           {options.map((opt) => {
             const Icon = opt.icon;
             const isSelected = theme === opt.value;

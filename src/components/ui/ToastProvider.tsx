@@ -61,12 +61,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             key={t.id}
             className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-2xl shadow-2xl backdrop-blur-2xl border transition-all animate-in fade-in slide-in-from-bottom-3 duration-200 ${
               t.type === "success"
-                ? "bg-[#0A1612]/95 border-emerald-500/30 text-emerald-200 dark:bg-[#0A1612]/95 dark:border-emerald-500/30 dark:text-emerald-200"
+                ? "bg-[#0A1612]/95 border-emerald-500/30 text-emerald-200"
                 : t.type === "error"
-                ? "bg-[#180A0A]/95 border-rose-500/30 text-rose-200 dark:bg-[#180A0A]/95 dark:border-rose-500/30 dark:text-rose-200"
+                ? "bg-[#180A0A]/95 border-rose-500/30 text-rose-200"
                 : t.type === "warning"
-                ? "bg-[#1A1408]/95 border-amber-500/30 text-amber-200 dark:bg-[#1A1408]/95 dark:border-amber-500/30 dark:text-amber-200"
-                : "bg-[#0B132B]/95 border-cyan-500/30 text-cyan-200 dark:bg-[#0B132B]/95 dark:border-cyan-500/30 dark:text-cyan-200"
+                ? "bg-[#1A1408]/95 border-amber-500/30 text-amber-200"
+                : "bg-[#0B132B]/95 border-cyan-500/30 text-cyan-200"
             }`}
           >
             <div className="shrink-0 mt-0.5">

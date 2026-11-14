@@ -17,9 +17,11 @@ import {
 } from "lucide-react";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { NEAR_CONFIG } from "@/lib/near/config";
+import { useToast } from "@/components/ui/ToastProvider";
 
 export default function RecipientsPage() {
   const { accountId } = useNearWallet();
+  const toast = useToast();
 
   // Search & verification states
   const [searchAddress, setSearchAddress] = useState("");
@@ -118,6 +120,7 @@ export default function RecipientsPage() {
       });
 
       if (res.ok) {
+        toast.success(`Counterparty "${regDisplayName}" registered successfully!`);
         await fetchRecipients();
         setShowRegisterModal(false);
         setRegPaymentId("");
@@ -131,10 +134,11 @@ export default function RecipientsPage() {
         setRegStellarWallet("");
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to register recipient");
+        toast.error(data.error || "Failed to register recipient", "Registration Error");
       }
     } catch (err) {
       console.error("Register recipient error:", err);
+      toast.error("Failed to register counterparty on server.", "Network Error");
     } finally {
       setRegistering(false);
     }

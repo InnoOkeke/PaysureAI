@@ -18,6 +18,7 @@ import {
 import { PaySureLogo } from "@/components/brand/Logos";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { NEAR_CONFIG } from "@/lib/near/config";
+import { ThemeToggle } from "@/components/navigation/ThemeToggle";
 
 export function Navbar() {
   const pathname = usePathname();
@@ -136,6 +137,7 @@ export function Navbar() {
 
         {/* Right: Session & Primary CTA */}
         <div className="flex items-center gap-2.5 shrink-0 whitespace-nowrap">
+          <ThemeToggle />
           {isLandingPage ? (
             <>
               <a

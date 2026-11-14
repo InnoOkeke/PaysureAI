@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    /* Dark Theme Default */
     --background: 225 38% 3%;
     --foreground: 210 20% 98%;
 
@@ -35,10 +36,46 @@
     --radius: 0.75rem;
   }
 
+  html.light {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 217 91% 54%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 214 32% 91%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 214 32% 91%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 85%;
+    --input: 214 32% 85%;
+    --ring: 217 91% 54%;
+  }
+
   *,
   ::before,
   ::after {
     border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  html.light *,
+  html.light ::before,
+  html.light ::after {
+    border-color: rgba(0, 0, 0, 0.08);
   }
 }
 
@@ -53,7 +90,12 @@ body {
   background: #050507;
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "cv01" 1;
   min-height: 100vh;
-  selection-background-color: rgba(59, 130, 246, 0.3);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+html.light body {
+  color: #0F172A;
+  background: #F8FAFC;
 }
 
 /* Subtle architectural grid overlay */
@@ -64,30 +106,35 @@ body {
     linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
 }
 
-/* Apple-inspired glass card surface */
-.apple-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.01) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+html.light .fintech-grid {
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
 }
 
-/* Ambient radial illumination */
-.fintech-glow {
-  background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.12) 0%, rgba(16, 185, 129, 0.04) 45%, transparent 75%);
-}
-
-/* Smooth custom scrollbars */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
-  background: #050507;
+  background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+html.light ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }

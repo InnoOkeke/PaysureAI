@@ -17,7 +17,9 @@ import {
   ArrowRight,
   ExternalLink,
   Cpu,
-  Layers
+  Layers,
+  ChevronDown,
+  Info
 } from "lucide-react";
 import { DEFAULT_TREASURY_POLICY } from "@/lib/treasury/policyEngine";
 import { buildSputnikTransferProposal, DEFAULT_SPUTNIK_DAO } from "@/lib/treasury/sputnikDao";
@@ -37,6 +39,7 @@ export default function TreasuryPage() {
   const [policyError, setPolicyError] = useState<string | null>(null);
   const [policyLoading, setPolicyLoading] = useState(false);
   const [savingPolicy, setSavingPolicy] = useState(false);
+  const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
 
   const [budgets, setBudgets] = useState(DEFAULT_TREASURY_POLICY.departmentBudgets);
 
@@ -552,59 +555,88 @@ export default function TreasuryPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-3">
-          {reputationLeaderboard.map((c) => (
-            <div
-              key={c.account}
-              className="p-4 rounded-xl bg-navy-950/70 border border-navy-800 flex flex-col md:flex-row md:items-center justify-between gap-4"
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2.5">
-                  <span className="text-sm font-bold text-white">{c.name}</span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                      c.status === "VERIFIED"
-                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                        : "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                    }`}
-                  >
-                    {c.status}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400 px-1.5 py-0.5 rounded bg-navy-900">
-                    {c.tier}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 font-mono">
-                  <span>NEAR: {c.account}</span>
-                  <span>&bull;</span>
-                  <span>Cross-Chain: {c.evm}</span>
-                </div>
-              </div>
+          {reputationLeaderboard.map((c) => {
+            const isExpanded = expandedAccount === c.account;
+            return (
+              <div
+                key={c.account}
+                className="p-4 rounded-2xl bg-navy-950/70 dark:bg-navy-950/70 border border-navy-800 transition-all hover:border-navy-700"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-sm font-bold text-white">{c.name}</span>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          c.status === "VERIFIED"
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                            : "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                        }`}
+                      >
+                        {c.status}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400 px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06]">
+                        {c.tier}
+                      </span>
+                    </div>
 
-              <div className="flex items-center gap-6">
-                <div className="text-right">
-                  <span className="text-xs text-slate-400 block">Trust Score</span>
-                  <span
-                    className={`text-lg font-extrabold font-mono ${
-                      c.reputationScore > 80
-                        ? "text-emerald-400"
-                        : c.reputationScore > 50
-                        ? "text-amber-400"
-                        : "text-rose-400"
-                    }`}
-                  >
-                    {c.reputationScore}/100
-                  </span>
+                    {/* Progressive Disclosure Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => setExpandedAccount(isExpanded ? null : c.account)}
+                      className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-white transition-colors pt-0.5"
+                    >
+                      <Info className="h-3 w-3 text-slate-400" />
+                      <span>{isExpanded ? "Hide contract metadata" : "View route & metadata"}</span>
+                      <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between sm:justify-end gap-5 shrink-0">
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Trust Score</span>
+                      <span
+                        className={`text-lg font-extrabold font-mono ${
+                          c.reputationScore > 80
+                            ? "text-emerald-400"
+                            : c.reputationScore > 50
+                            ? "text-amber-400"
+                            : "text-rose-400"
+                        }`}
+                      >
+                        {c.reputationScore}/100
+                      </span>
+                    </div>
+
+                    <a
+                      href={`/pay?recipient=${c.account}`}
+                      className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition-all shadow-md shadow-brand-600/20 active:scale-[0.98]"
+                    >
+                      Pay
+                    </a>
+                  </div>
                 </div>
 
-                <a
-                  href={`/pay?recipient=${c.account}`}
-                  className="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition-all shadow-md shadow-brand-600/20"
-                >
-                  Pay Counterparty
-                </a>
+                {/* Expanded Technical Metadata Popover / Drawer */}
+                {isExpanded && (
+                  <div className="mt-3.5 pt-3.5 border-t border-white/[0.06] grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-mono bg-black/25 dark:bg-black/25 p-3 rounded-xl border border-white/[0.05] animate-in fade-in duration-150">
+                    <div>
+                      <span className="block text-[10px] text-slate-500 uppercase font-sans font-semibold">NEAR Identity</span>
+                      <span className="text-white text-[11px] truncate block">{c.account}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] text-slate-500 uppercase font-sans font-semibold">Cross-Chain Route</span>
+                      <span className="text-slate-300 text-[11px] truncate block">{c.evm}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] text-slate-500 uppercase font-sans font-semibold">Verified Settlements</span>
+                      <span className="text-emerald-400 font-bold text-[11px]">{c.settledCount} Transactions</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

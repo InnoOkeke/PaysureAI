@@ -16,7 +16,9 @@ import {
   Globe,
   Check,
   Lock,
-  Terminal
+  Terminal,
+  ChevronDown,
+  Info
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import jsPDF from "jspdf";
@@ -25,6 +27,7 @@ import { NEAR_CONFIG, isValidNearAccountId } from "@/lib/near/config";
 import { isEVMAddress, deriveEVMAddressFromNear } from "@/lib/near/chainSignatures";
 import { detectChainFromAddress } from "@/lib/recipients";
 import { formatCurrency } from "@/lib/utils";
+import { useToast } from "@/components/ui/ToastProvider";
 
 const SUPPORTED_CHAINS = [
   { id: "near", name: "NEAR Protocol", rail: "NEAR Native", badge: "NEAR", color: "text-emerald-400" },
@@ -49,6 +52,7 @@ export default function PayPage() {
   const txHashParam = searchParams.get("transactionHashes");
 
   const { accountId, isConnected, balance, connect, sendNearPayment, sendChainSignaturePayment, refreshBalance } = useNearWallet();
+  const toast = useToast();
 
   // Workflow states
   const [recipient, setRecipient] = useState(recipientParam || "");
@@ -74,6 +78,8 @@ export default function PayPage() {
   // Settlement states
   const [isExecuting, setIsExecuting] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
+  const [showSecurityDetails, setShowSecurityDetails] = useState(false);
+  const [showCoPDetails, setShowCoPDetails] = useState(false);
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [pendingError, setPendingError] = useState<string | null>(null);
 
@@ -362,15 +368,15 @@ export default function PayPage() {
 
   const handlePayWithMyNearWallet = async () => {
     if (!recipient || !isValidRecipient(recipient)) {
-      alert("Please enter a valid destination recipient address or NEAR account.");
+      toast.error("Please enter a valid destination recipient address or NEAR account.", "Invalid Recipient");
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
-      alert("Please enter a valid amount.");
+      toast.error("Please enter a valid amount.", "Invalid Amount");
       return;
     }
     if (isInsufficientBalance) {
-      alert(`Insufficient funds. Your available balance is ${balance} NEAR.`);
+      toast.warning(`Insufficient funds. Your available balance is ${balance} NEAR.`, "Insufficient Balance");
       return;
     }
 
@@ -395,8 +401,9 @@ export default function PayPage() {
 
       window.location.href = walletUrl;
     } catch (err: any) {
-      setPendingError(err.message || "Failed to prepare payment approval.");
-      alert(err.message || "Failed to prepare payment approval.");
+      const msg = err.message || "Failed to prepare payment approval.";
+      setPendingError(msg);
+      toast.error(msg, "Payment Approval Error");
     }
   };
 
@@ -421,15 +428,15 @@ export default function PayPage() {
   const handleProceedToReview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!recipient || !isValidRecipient(recipient)) {
-      alert("Please enter a valid recipient account or address.");
+      toast.error("Please enter a valid recipient account or address.", "Invalid Recipient");
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
-      alert("Please enter a valid amount.");
+      toast.error("Please enter a valid payment amount.", "Invalid Amount");
       return;
     }
     if (isInsufficientBalance) {
-      alert(`Insufficient funds. Your available balance is ${balance} NEAR.`);
+      toast.warning(`Insufficient funds. Your available balance is ${balance} NEAR.`, "Insufficient Balance");
       return;
     }
     setPendingError(null);
@@ -442,21 +449,21 @@ export default function PayPage() {
       return;
     }
     if (!recipient || !isValidRecipient(recipient)) {
-      alert("Please enter a valid recipient account or address.");
+      toast.error("Please enter a valid recipient account or address.", "Invalid Recipient");
       return;
     }
     if (!amount || parseFloat(amount) <= 0) {
-      alert("Please enter a valid amount.");
+      toast.error("Please enter a valid payment amount.", "Invalid Amount");
       return;
     }
     if (paymentBlocked) {
-      setPendingError(
-        "This payment is blocked by the active treasury policy. Resolve the violations or escalate to SputnikDAO before signing."
-      );
+      const msg = "This payment is blocked by the active treasury policy. Resolve the violations or escalate to SputnikDAO before signing.";
+      setPendingError(msg);
+      toast.error(msg, "Policy Guardrail Block");
       return;
     }
     if (isInsufficientBalance) {
-      alert(`Insufficient funds. Your available balance is ${balance} NEAR.`);
+      toast.warning(`Insufficient funds. Your available balance is ${balance} NEAR.`, "Insufficient Balance");
       return;
     }
 
@@ -528,8 +535,9 @@ export default function PayPage() {
         await cancelPendingPayment(actionId);
       }
       console.error("NEAR transaction execution error:", err);
-      setPendingError(err.message || "Failed to execute transaction with connected NEAR wallet.");
-      alert(err.message || "Failed to execute transaction with connected NEAR wallet.");
+      const msg = err.message || "Failed to execute transaction with connected NEAR wallet.";
+      setPendingError(msg);
+      toast.error(msg, "Execution Error");
     } finally {
       setIsExecuting(false);
     }
@@ -1064,31 +1072,55 @@ export default function PayPage() {
           <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24 h-fit">
             
             {/* Active Treasury Guardrails Summary */}
-            <div className="rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 space-y-3.5 text-xs shadow-xl">
-              <div className="flex items-center gap-2 text-slate-300 font-semibold">
-                <Lock className="h-3.5 w-3.5 text-brand-400" />
-                <span>Active Settlement Safeguards</span>
+            <div className="rounded-3xl bg-[#090B10] dark:bg-[#090B10] border border-white/[0.08] p-5 sm:p-6 space-y-3 text-xs shadow-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-slate-300 font-semibold">
+                  <Lock className="h-3.5 w-3.5 text-brand-400" />
+                  <span>Settlement Guardrails</span>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  Enforced
+                </span>
               </div>
-              <div className="space-y-2 font-mono text-[11px]">
-                <div className="flex justify-between py-1.5 border-b border-white/[0.05] text-slate-400">
-                  <span>Single-Tx Policy Limit</span>
-                  <span className="text-white">200.00 NEAR ($500)</span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-white/[0.05] text-slate-400">
-                  <span>Consensus Finality</span>
-                  <span className="text-emerald-400">~1.1s (Nightshade 2.0)</span>
-                </div>
-                <div className="flex justify-between py-1.5 text-slate-400">
-                  <span>Custody Model</span>
-                  <span className="text-slate-200">Non-Custodial Wallet Sign</span>
-                </div>
+
+              <div className="flex items-center justify-between py-1 text-slate-400 text-[11px]">
+                <span>Autonomous Policy Cap</span>
+                <span className="font-mono font-semibold text-white">200.00 NEAR ($500)</span>
               </div>
+
+              {/* Progressive Disclosure Toggle */}
+              <button
+                type="button"
+                onClick={() => setShowSecurityDetails(!showSecurityDetails)}
+                className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-white transition-colors pt-1"
+              >
+                <Info className="h-3 w-3 text-slate-400" />
+                <span>{showSecurityDetails ? "Hide technical specifications" : "View technical specifications"}</span>
+                <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${showSecurityDetails ? "rotate-180" : ""}`} />
+              </button>
+
+              {showSecurityDetails && (
+                <div className="pt-2 border-t border-white/[0.06] space-y-2 font-mono text-[10.5px] text-slate-400 animate-in fade-in duration-150">
+                  <div className="flex justify-between py-1 border-b border-white/[0.04]">
+                    <span>Consensus Finality</span>
+                    <span className="text-emerald-400">~1.1s (Nightshade 2.0)</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-white/[0.04]">
+                    <span>Custody Architecture</span>
+                    <span className="text-slate-200">Non-Custodial Wallet Sign</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span>MPC Signer Rail</span>
+                    <span className="text-cyan-400 truncate max-w-[150px]">v1.signer-prod.testnet</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Live Payee Verification Panel (Confirmation of Payee) */}
-            <div className="rounded-3xl bg-[#090B10] border border-white/[0.08] p-6 sm:p-7 space-y-5 shadow-xl">
-              <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
-                <div className="flex items-center gap-2.5">
+            <div className="rounded-3xl bg-[#090B10] dark:bg-[#090B10] border border-white/[0.08] p-5 sm:p-6 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+                <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-emerald-400" />
                   <h3 className="text-sm font-semibold text-white">Confirmation of Payee</h3>
                 </div>
@@ -1098,9 +1130,9 @@ export default function PayPage() {
               </div>
 
               {verification ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div
-                    className={`p-4 rounded-2xl border flex items-start gap-3 ${
+                    className={`p-3.5 rounded-2xl border flex items-start gap-3 ${
                       verification.status === "VERIFIED"
                         ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-300"
                         : verification.status === "WARNING"
@@ -1109,9 +1141,9 @@ export default function PayPage() {
                     }`}
                   >
                     {verification.status === "VERIFIED" ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                     ) : (
-                      <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                      <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
                     )}
                     <div className="space-y-1 text-xs">
                       <div className="flex items-center gap-2">
@@ -1122,47 +1154,74 @@ export default function PayPage() {
                             ? "Security Advisory Flag"
                             : "Unregistered or High Risk"}
                         </span>
-                        <span className="font-mono text-[10px] uppercase px-2 py-0.5 rounded-full bg-black/40 border border-white/[0.08]">
+                        <span className="font-mono text-[9px] uppercase px-2 py-0.5 rounded-full bg-black/40 border border-white/[0.08]">
                           {verification.status}
                         </span>
                       </div>
                       {verification.reason && (
-                        <p className="text-slate-300 leading-relaxed pt-1">{verification.reason}</p>
+                        <p className="text-slate-300 leading-relaxed text-[11px] pt-0.5">{verification.reason}</p>
                       )}
                     </div>
                   </div>
 
                   {verification.recipient && (
-                    <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-2.5 text-xs font-mono">
-                      <div className="flex justify-between text-slate-400">
-                        <span>Registered Entity</span>
-                        <span className="text-white font-sans font-medium">{verification.recipient.displayName}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-400">
-                        <span>Payment ID</span>
-                        <span className="text-brand-300">{verification.recipient.paymentId}</span>
-                      </div>
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setShowCoPDetails(!showCoPDetails)}
+                        className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-white transition-colors"
+                      >
+                        <Info className="h-3 w-3 text-slate-400" />
+                        <span>{showCoPDetails ? "Hide registry metadata" : "View registry metadata"}</span>
+                        <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${showCoPDetails ? "rotate-180" : ""}`} />
+                      </button>
+
+                      {showCoPDetails && (
+                        <div className="mt-2.5 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2 text-[11px] font-mono animate-in fade-in duration-150">
+                          <div className="flex justify-between text-slate-400">
+                            <span>Registered Entity</span>
+                            <span className="text-white font-sans font-medium">{verification.recipient.displayName}</span>
+                          </div>
+                          <div className="flex justify-between text-slate-400">
+                            <span>Payment ID</span>
+                            <span className="text-brand-300">{verification.recipient.paymentId}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Enter a recipient account or cross-chain address on the left to automatically query the on-chain registry and screen for lookalike homoglyphs.
+                    Enter a recipient account or multi-chain address to automatically screen on-chain existence and homoglyphs.
                   </p>
-                  <div className="space-y-2.5 text-xs">
-                    {[
-                      "On-chain account existence check (NEAR RPC)",
-                      "Corporate entity name & payment ID attestation",
-                      "Levenshtein distance typosquatting defense",
-                      "Autonomous treasury velocity compliance"
-                    ].map((checkItem) => (
-                      <div key={checkItem} className="flex items-center gap-2.5 text-slate-300 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                        <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                        <span>{checkItem}</span>
-                      </div>
-                    ))}
-                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowCoPDetails(!showCoPDetails)}
+                    className="inline-flex items-center gap-1.5 text-[11px] text-brand-400 hover:text-brand-300 transition-colors"
+                  >
+                    <Info className="h-3 w-3" />
+                    <span>{showCoPDetails ? "Hide 4 automated checks" : "View 4 automated checks"}</span>
+                    <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${showCoPDetails ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {showCoPDetails && (
+                    <div className="space-y-1.5 text-[11px] pt-1 animate-in fade-in duration-150">
+                      {[
+                        "On-chain account existence check (NEAR RPC)",
+                        "Corporate entity name & payment ID attestation",
+                        "Levenshtein distance typosquatting defense",
+                        "Autonomous treasury velocity compliance"
+                      ].map((checkItem) => (
+                        <div key={checkItem} className="flex items-center gap-2 text-slate-300 p-2 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                          <Check className="h-3 w-3 text-emerald-400 shrink-0" />
+                          <span>{checkItem}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

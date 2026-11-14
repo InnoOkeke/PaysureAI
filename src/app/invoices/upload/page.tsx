@@ -17,9 +17,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { formatAddress, formatCurrency } from "@/lib/utils";
+import { useToast } from "@/components/ui/ToastProvider";
 
 export default function InvoiceUploadPage() {
   const router = useRouter();
+  const toast = useToast();
   const [file, setFile] = useState<File | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [extractedData, setExtractedData] = useState<any>(null);
@@ -123,7 +125,7 @@ ATTENTION: Notice account address change!`;
 
   const handleSaveInvoice = async (proceedToPay = false) => {
     if (!invoiceNumber || !recipientName || !recipientAddress || !amount) {
-      alert("Please ensure all mandatory fields are completed.");
+      toast.error("Please ensure all mandatory fields are completed.", "Incomplete Fields");
       return;
     }
 
@@ -145,14 +147,18 @@ ATTENTION: Notice account address change!`;
 
       const data = await res.json();
       if (res.ok && data.invoice) {
+        toast.success(`Invoice ${data.invoice.invoiceNumber} saved!`);
         if (proceedToPay) {
           router.push(`/pay?invoiceId=${data.invoice.id}`);
         } else {
           router.push("/invoices");
         }
+      } else {
+        toast.error(data.error || "Failed to save invoice.", "Error");
       }
     } catch (err) {
       console.error("Save invoice error:", err);
+      toast.error("Failed to connect to invoice storage server.", "Network Error");
     } finally {
       setSaving(false);
     }
@@ -160,7 +166,7 @@ ATTENTION: Notice account address change!`;
 
   const handlePayWithCopilotAfterSave = async () => {
     if (!invoiceNumber || !recipientName || !recipientAddress || !amount) {
-      alert("Please ensure all mandatory fields are completed.");
+      toast.error("Please ensure all mandatory fields are completed.", "Incomplete Fields");
       return;
     }
 
@@ -182,6 +188,7 @@ ATTENTION: Notice account address change!`;
 
       const data = await res.json();
       if (res.ok && data.invoice) {
+        toast.success("Invoice saved! Handing off to AI Copilot...");
         window.dispatchEvent(
           new CustomEvent("paysure:open-copilot", {
             detail: {
@@ -190,11 +197,11 @@ ATTENTION: Notice account address change!`;
           })
         );
       } else {
-        alert(data.error || "Failed to save invoice.");
+        toast.error(data.error || "Failed to save invoice.", "Error");
       }
     } catch (err) {
       console.error("Save invoice error:", err);
-      alert("Error saving invoice for Copilot payment.");
+      toast.error("Error saving invoice for Copilot payment.", "Network Error");
     } finally {
       setSaving(false);
     }

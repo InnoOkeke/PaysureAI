@@ -26,6 +26,7 @@ import confetti from "canvas-confetti";
 import { PaySureLogo } from "@/components/brand/Logos";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { NEAR_CONFIG } from "@/lib/near/config";
+import { useToast } from "@/components/ui/ToastProvider";
 
 interface Message {
   role: "user" | "assistant";
@@ -45,6 +46,7 @@ interface Message {
 export function FloatingCopilot() {
   const pathname = usePathname();
   const router = useRouter();
+  const toast = useToast();
   const { 
     accountId, 
     isConnected, 
@@ -330,7 +332,7 @@ export function FloatingCopilot() {
       setMessages((prev) => [...prev, receiptMsg]);
     } catch (err: any) {
       console.error("In-chat payment error:", err);
-      alert(err.message || "Failed to execute transaction with connected wallet.");
+      toast.error(err.message || "Failed to execute transaction with connected wallet.", "Transaction Failed");
     } finally {
       setPayingIntentId(null);
     }

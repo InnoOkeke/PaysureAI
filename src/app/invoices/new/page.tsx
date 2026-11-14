@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { detectChainFromAddress } from "@/lib/recipients";
 import { useNearWallet } from "@/context/NearWalletContext";
+import { useToast } from "@/components/ui/ToastProvider";
 
 const SUPPORTED_CHAINS = [
   { id: "near", name: "NEAR Protocol", rail: "Native", badge: "NEAR" },
@@ -31,7 +32,9 @@ const SUPPORTED_CHAINS = [
 
 export default function NewInvoicePage() {
   const router = useRouter();
+  const toast = useToast();
   const { isConnected, balance } = useNearWallet();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const [invoiceNumber, setInvoiceNumber] = useState(
     "INV-" + Math.floor(1000 + Math.random() * 9000)
@@ -87,18 +90,26 @@ export default function NewInvoicePage() {
   };
 
   const handleSubmit = async (proceedToPay = false) => {
+    setFormError(null);
+
     if (!invoiceNumber || !recipientName || !recipientAddress || !amount) {
-      alert("Please fill in all required fields.");
+      const msg = "Please fill in all required fields.";
+      setFormError(msg);
+      toast.error(msg, "Validation Error");
       return;
     }
 
     if (recipientAddress.trim().length < 3) {
-      alert("Please enter a valid recipient account or multi-chain address.");
+      const msg = "Please enter a valid recipient account or multi-chain address.";
+      setFormError(msg);
+      toast.error(msg, "Invalid Address");
       return;
     }
 
     if (proceedToPay && isInsufficientBalance) {
-      alert(`Insufficient funds. Your available balance is ${balance} NEAR.`);
+      const msg = `Insufficient funds. Your available balance is ${balance} NEAR.`;
+      setFormError(msg);
+      toast.warning(msg, "Balance Warning");
       return;
     }
 
@@ -120,17 +131,22 @@ export default function NewInvoicePage() {
 
       const data = await res.json();
       if (res.ok && data.invoice) {
+        toast.success(`Invoice ${data.invoice.invoiceNumber} created successfully!`);
         if (proceedToPay) {
           router.push(`/pay?invoiceId=${data.invoice.id}&network=${selectedChainId}`);
         } else {
           router.push("/invoices");
         }
       } else {
-        alert(data.error || "Failed to create invoice.");
+        const err = data.error || "Failed to create invoice.";
+        setFormError(err);
+        toast.error(err, "Creation Failed");
       }
     } catch (err: any) {
       console.error(err);
-      alert("Error saving invoice.");
+      const errorMsg = "Error saving invoice to database.";
+      setFormError(errorMsg);
+      toast.error(errorMsg, "Server Error");
     } finally {
       setSaving(false);
     }
@@ -360,6 +376,13 @@ export default function NewInvoicePage() {
             />
           </div>
         </div>
+
+        {formError && (
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2.5">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-rose-400" />
+            <span>{formError}</span>
+          </div>
+        )}
 
         <div className="pt-4 border-t border-navy-800 flex items-center justify-between gap-4">
           <Link

@@ -32,6 +32,15 @@ interface NearWalletContextType {
   disconnect: () => Promise<void>;
   sendNearPayment: (recipient: string, amount: string) => Promise<string>;
   sendChainSignaturePayment: (evmAddress: string, amount: string) => Promise<string>;
+  signChallengeProof: (action: string) => Promise<{
+    accountId: string;
+    publicKey: string;
+    signature: string;
+    message: string;
+    nonce: string;
+    recipient: string;
+    challengeToken: string;
+  }>;
   refreshBalance: () => Promise<void>;
   isConnecting: boolean;
   isFetchingBalance: boolean;
@@ -49,6 +58,9 @@ const NearWalletContext = createContext<NearWalletContextType>({
   disconnect: async () => {},
   sendNearPayment: async () => "",
   sendChainSignaturePayment: async () => "",
+  signChallengeProof: async () => {
+    throw new Error("Wallet not initialized");
+  },
   refreshBalance: async () => {},
   isConnecting: false,
   isFetchingBalance: false,
@@ -328,6 +340,51 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
     [selector, refreshBalance]
   );
 
+  const signChallengeProof = useCallback(
+    async (action: string) => {
+      if (!selector || !accountId) {
+        throw new Error("Connect your NEAR wallet first to sign this action.");
+      }
+
+      const challengeRes = await fetch(
+        `/api/auth/challenge?accountId=${encodeURIComponent(accountId)}&action=${encodeURIComponent(action)}`
+      );
+      const challenge = await challengeRes.json();
+      if (!challengeRes.ok) {
+        throw new Error(challenge.error || "Failed to fetch signing challenge.");
+      }
+
+      const wallet = await selector.wallet();
+      if (typeof wallet.signMessage !== "function") {
+        throw new Error(
+          "Your connected wallet does not support NEP-413 message signing. Please use Meteor, MyNearWallet, or Nightly."
+        );
+      }
+
+      const nonceBytes = Buffer.from(challenge.nonce, "base64");
+      const signed = await wallet.signMessage({
+        message: challenge.message,
+        nonce: nonceBytes,
+        recipient: challenge.recipient,
+      });
+
+      if (!signed || !signed.signature || !signed.publicKey) {
+        throw new Error("Wallet signing was cancelled or returned an empty signature.");
+      }
+
+      return {
+        accountId: signed.accountId || accountId,
+        publicKey: signed.publicKey,
+        signature: signed.signature,
+        message: challenge.message,
+        nonce: challenge.nonce,
+        recipient: challenge.recipient,
+        challengeToken: challenge.token,
+      };
+    },
+    [selector, accountId]
+  );
+
   return (
     <NearWalletContext.Provider
       value={{
@@ -342,6 +399,7 @@ export function NearWalletProvider({ children }: { children: React.ReactNode }) 
         disconnect,
         sendNearPayment,
         sendChainSignaturePayment,
+        signChallengeProof,
         refreshBalance,
         isConnecting,
         isFetchingBalance,

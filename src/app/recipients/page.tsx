@@ -1,26 +1,30 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Users, 
-  ShieldCheck, 
-  Plus, 
-  Search, 
-  ExternalLink, 
-  CheckCircle2, 
+import {
+  Users,
+  ShieldCheck,
+  Plus,
+  Search,
+  ExternalLink,
+  CheckCircle2,
   AlertTriangle,
   ArrowRight,
   Loader2,
   Globe,
   Copy,
-  Check
+  Check,
+  Lock,
+  Pencil,
+  History,
+  XCircle,
 } from "lucide-react";
 import { useNearWallet } from "@/context/NearWalletContext";
 import { NEAR_CONFIG } from "@/lib/near/config";
 import { useToast } from "@/components/ui/ToastProvider";
 
 export default function RecipientsPage() {
-  const { accountId } = useNearWallet();
+  const { accountId, isConnected, connect, signChallengeProof } = useNearWallet();
   const toast = useToast();
 
   // Search & verification states
@@ -31,7 +35,6 @@ export default function RecipientsPage() {
 
   // Registration modal states
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [showMultiChainFields, setShowMultiChainFields] = useState(true);
   const [regPaymentId, setRegPaymentId] = useState("");
   const [regDisplayName, setRegDisplayName] = useState("");
   const [regWallet, setRegWallet] = useState(accountId || "");
@@ -42,18 +45,39 @@ export default function RecipientsPage() {
   const [regCosmosWallet, setRegCosmosWallet] = useState("");
   const [regStacksWallet, setRegStacksWallet] = useState("");
   const [regStellarWallet, setRegStellarWallet] = useState("");
+  const [regVendorDomain, setRegVendorDomain] = useState("");
   const [registering, setRegistering] = useState(false);
+  const [verifyingDomainId, setVerifyingDomainId] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
+  // Propose Edit modal states
+  const [editingTarget, setEditingTarget] = useState<any | null>(null);
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [editWallet, setEditWallet] = useState("");
+  const [editEvmWallet, setEditEvmWallet] = useState("");
+  const [editReason, setEditReason] = useState("");
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+
+  // Governance & Audit states
   const [recipientsList, setRecipientsList] = useState<any[]>([]);
+  const [pendingChanges, setPendingChanges] = useState<any[]>([]);
+  const [auditLog, setAuditLog] = useState<any[]>([]);
+  const [sputnikCouncil, setSputnikCouncil] = useState<{
+    daoContract: string;
+    members: string[];
+    source: string;
+    error?: string;
+  } | null>(null);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
 
   const fetchRecipients = async () => {
     try {
       const res = await fetch("/api/recipients");
       const data = await res.json();
-      if (data.recipients) {
-        setRecipientsList(data.recipients);
-      }
+      if (data.recipients) setRecipientsList(data.recipients);
+      if (data.pendingChanges) setPendingChanges(data.pendingChanges);
+      if (data.auditLog) setAuditLog(data.auditLog);
+      if (data.sputnikCouncil) setSputnikCouncil(data.sputnikCouncil);
     } catch (e) {
       console.error("Failed to load recipients:", e);
     }
@@ -96,14 +120,24 @@ export default function RecipientsPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isConnected || !accountId) {
+      toast.warning("Connect your NEAR wallet to submit a payee registration.", "Wallet Required");
+      connect();
+      return;
+    }
     if (!regDisplayName || !regWallet) return;
 
     setRegistering(true);
     try {
+      const authProof = await signChallengeProof(`register:${regWallet.trim().toLowerCase()}`);
       const res = await fetch("/api/recipients", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
+          authProof,
+          requestedBy: accountId,
           displayName: regDisplayName.trim(),
           paymentId: regPaymentId.trim() || undefined,
           walletAddress: regWallet.trim(),
@@ -114,13 +148,16 @@ export default function RecipientsPage() {
           cosmosAddress: regCosmosWallet.trim() || undefined,
           stacksAddress: regStacksWallet.trim() || undefined,
           stellarAddress: regStellarWallet.trim() || undefined,
-          notes: "Registered on NEAR Confirmation of Payee Directory.",
-          verificationStatus: "VERIFIED",
+          vendorDomain: regVendorDomain.trim() || undefined,
+          notes: "Submitted for dual-control verification.",
         }),
       });
 
+      const data = await res.json();
       if (res.ok) {
-        toast.success(`Counterparty "${regDisplayName}" registered successfully!`);
+        toast.success(
+          `Counterparty "${regDisplayName}" queued as UNVERIFIED for second-signer approval.`
+        );
         await fetchRecipients();
         setShowRegisterModal(false);
         setRegPaymentId("");
@@ -132,15 +169,141 @@ export default function RecipientsPage() {
         setRegCosmosWallet("");
         setRegStacksWallet("");
         setRegStellarWallet("");
+        setRegVendorDomain("");
       } else {
-        const data = await res.json();
-        toast.error(data.error || "Failed to register recipient", "Registration Error");
+        toast.error(data.error || "Failed to register recipient", "Registration Blocked");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Register recipient error:", err);
-      toast.error("Failed to register counterparty on server.", "Network Error");
+      toast.error(err?.message || "Failed to register counterparty on server.", "Registration Failed");
     } finally {
       setRegistering(false);
+    }
+  };
+
+  const openEditModal = (r: any) => {
+    if (!isConnected || !accountId) {
+      toast.warning("Connect your NEAR wallet to propose a payee update.", "Wallet Required");
+      connect();
+      return;
+    }
+    setEditingTarget(r);
+    setEditDisplayName(r.displayName || "");
+    setEditWallet(r.walletAddress || "");
+    setEditEvmWallet(r.evmAddress || "");
+    setEditReason("");
+  };
+
+  const handleProposeUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTarget || !accountId) return;
+
+    setSubmittingEdit(true);
+    try {
+      const authProof = await signChallengeProof(`propose_update:${editingTarget.paymentId}`);
+      const res = await fetch("/api/recipients", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          authProof,
+          requestedBy: accountId,
+          paymentId: editingTarget.paymentId,
+          reason: editReason.trim() || "Settlement endpoint update",
+          proposedValues: {
+            displayName: editDisplayName.trim(),
+            walletAddress: editWallet.trim(),
+            evmAddress: editEvmWallet.trim() || undefined,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(
+          `Change request queued for "${editingTarget.displayName}". Active verified record remains locked until approved.`
+        );
+        setEditingTarget(null);
+        await fetchRecipients();
+      } else {
+        toast.error(data.error || "Failed to propose update", "Update Error");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Network error proposing payee update.", "Update Failed");
+    } finally {
+      setSubmittingEdit(false);
+    }
+  };
+
+  const handleReviewChange = async (changeId: string, decision: "APPROVE" | "REJECT") => {
+    if (!isConnected || !accountId) {
+      toast.warning("Connect an authorized second-signer NEAR wallet to review.", "Wallet Required");
+      connect();
+      return;
+    }
+
+    setReviewingId(changeId);
+    try {
+      const authProof = await signChallengeProof(`review:${decision}:${changeId}`);
+      const res = await fetch("/api/recipients/changes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          authProof,
+          changeId,
+          decision,
+          approverAccountId: accountId,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(
+          decision === "APPROVE"
+            ? "Change approved and recorded in the immutable audit log."
+            : "Change request rejected; live payee record unchanged."
+        );
+        await fetchRecipients();
+      } else {
+        toast.error(data.error || "Review action blocked.", "Dual-Control Policy");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Network error submitting review.", "Review Failed");
+    } finally {
+      setReviewingId(null);
+    }
+  };
+
+  const handleVerifyDomain = async (paymentId: string, vendorDomain?: string) => {
+    setVerifyingDomainId(paymentId);
+    try {
+      const res = await fetch("/api/recipients/verify-domain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentId,
+          domain: vendorDomain,
+          actorAccountId: accountId || "operator-dns-check",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.attestation?.verified) {
+        toast.success(
+          `DNS TXT proof verified for ${data.attestation.domain} (${data.attestation.matchedHost}).`,
+          "Domain Attested"
+        );
+        await fetchRecipients();
+      } else {
+        toast.warning(
+          data.attestation?.error || data.error || "DNS TXT record not found yet.",
+          "DNS Proof Pending"
+        );
+      }
+    } catch {
+      toast.error("Failed to check DNS TXT record.", "Network Error");
+    } finally {
+      setVerifyingDomainId(null);
     }
   };
 
@@ -319,14 +482,52 @@ export default function RecipientsPage() {
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                       r.verificationStatus === "VERIFIED"
                         ? "bg-success-soft text-success border-success-border"
+                        : r.verificationStatus === "UNVERIFIED"
+                        ? "bg-subtle text-ink-muted border-line"
                         : "bg-warning-soft text-warning border-warning-border"
                     }`}
                   >
                     {r.verificationStatus}
                   </span>
+                  {r.vendorDomain && (
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                        r.domainVerified
+                          ? "bg-success-soft text-success border-success-border"
+                          : "bg-warning-soft text-warning border-warning-border"
+                      }`}
+                    >
+                      {r.domainVerified ? `DNS Verified: ${r.vendorDomain}` : `DNS Pending: ${r.vendorDomain}`}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {r.vendorDomain && !r.domainVerified && (
+                    <button
+                      type="button"
+                      disabled={verifyingDomainId === r.paymentId}
+                      onClick={() => handleVerifyDomain(r.paymentId, r.vendorDomain)}
+                      className="btn-secondary flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs focus-ring"
+                      title={`Verify _paysure.${r.vendorDomain} TXT record`}
+                    >
+                      {verifyingDomainId === r.paymentId ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <ShieldCheck className="h-3.5 w-3.5 text-warning" />
+                      )}
+                      <span>Verify DNS</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => openEditModal(r)}
+                    className="btn-secondary flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs focus-ring"
+                    title="Propose address or entity update (requires second-signer approval)"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    <span>Propose Edit</span>
+                  </button>
                   <a
                     href={`${NEAR_CONFIG.explorerUrl}/address/${r.walletAddress}`}
                     target="_blank"
@@ -480,6 +681,198 @@ export default function RecipientsPage() {
         </div>
       </div>
 
+      {/* Dual-Control Approval Queue & Immutable Audit Trail */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Pending Approval Queue */}
+        <div className="surface-card rounded-2xl p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-line-subtle pb-3">
+            <div>
+              <h3 className="text-base font-bold text-ink flex items-center gap-2">
+                <Lock className="h-4 w-4 text-accent-ink" />
+                <span>Pending Registry Approvals</span>
+              </h3>
+              <p className="text-xs text-ink-muted mt-0.5">
+                Only verified SputnikDAO council members ({sputnikCouncil?.daoContract || "paysure-council.sputnik-dao.testnet"}) other than the requester can approve.
+              </p>
+            </div>
+            <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-subtle border border-line-subtle text-ink-secondary">
+              {pendingChanges.filter((c) => c.status === "PENDING_APPROVAL").length} Pending
+            </span>
+          </div>
+
+          {sputnikCouncil && (
+            <div className="surface-inset p-3 rounded-xl text-[11px] flex flex-wrap items-center justify-between gap-2">
+              <div className="font-mono text-ink-secondary">
+                DAO: <strong className="text-ink">{sputnikCouncil.daoContract}</strong>{" "}
+                <span className="text-ink-muted">({sputnikCouncil.source})</span>
+              </div>
+              <div className="font-mono text-ink-muted">
+                {sputnikCouncil.members.length > 0
+                  ? `${sputnikCouncil.members.length} Council Member(s)`
+                  : "No council members resolved"}
+              </div>
+            </div>
+          )}
+
+          {pendingChanges.length === 0 ? (
+            <div className="surface-inset p-6 rounded-xl text-center text-xs text-ink-muted">
+              No pending registry changes. All verified payee records are locked.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingChanges.map((chg) => {
+                const isSelfRequester =
+                  accountId && accountId.toLowerCase() === chg.requestedBy?.toLowerCase();
+                const isCouncilMember =
+                  accountId &&
+                  sputnikCouncil?.members?.includes(accountId.trim().toLowerCase());
+                const canApprove = Boolean(isConnected && !isSelfRequester && isCouncilMember);
+                const isPending = chg.status === "PENDING_APPROVAL";
+                return (
+                  <div key={chg.id} className="surface-inset p-4 rounded-xl space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-bold text-ink">{chg.displayName}</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent-soft text-accent-ink border border-accent-border">
+                            {chg.changeType === "NEW_REGISTRATION" ? "New Payee" : "Address Update"}
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              chg.status === "APPROVED"
+                                ? "bg-success-soft text-success border-success-border"
+                                : chg.status === "REJECTED"
+                                ? "bg-danger-soft text-danger border-danger-border"
+                                : "bg-warning-soft text-warning border-warning-border"
+                            }`}
+                          >
+                            {chg.status}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-ink-muted mt-1 font-mono">
+                          Proposed by: <span className="text-ink-secondary">{chg.requestedBy}</span>
+                          {chg.approvedBy && (
+                            <> · Reviewed by: <span className="text-ink-secondary">{chg.approvedBy}</span></>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {chg.reason && (
+                      <p className="text-xs text-ink-secondary">{chg.reason}</p>
+                    )}
+
+                    <div className="text-[11px] font-mono bg-elevated border border-line-subtle rounded-lg p-2.5 space-y-1">
+                      {chg.previousValues?.walletAddress &&
+                        chg.previousValues.walletAddress !== chg.proposedValues?.walletAddress && (
+                          <div className="text-ink-muted truncate">
+                            NEAR: <span className="line-through text-danger">{chg.previousValues.walletAddress}</span>{" "}
+                            &rarr; <span className="text-success">{chg.proposedValues.walletAddress}</span>
+                          </div>
+                        )}
+                      {chg.previousValues?.evmAddress !== chg.proposedValues?.evmAddress && (
+                        <div className="text-ink-muted truncate">
+                          EVM: <span className="line-through text-danger">{chg.previousValues?.evmAddress || "none"}</span>{" "}
+                          &rarr; <span className="text-success">{chg.proposedValues?.evmAddress || "none"}</span>
+                        </div>
+                      )}
+                      {chg.changeType === "NEW_REGISTRATION" && (
+                        <div className="text-ink-secondary truncate">
+                          NEAR: {chg.proposedValues?.walletAddress}
+                        </div>
+                      )}
+                    </div>
+
+                    {isPending && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                        {isSelfRequester ? (
+                          <span className="text-[11px] text-warning font-medium">
+                            Self-approval blocked (Dual Control: connect another council wallet)
+                          </span>
+                        ) : isConnected && !isCouncilMember ? (
+                          <span className="text-[11px] text-danger font-medium">
+                            {accountId} is not a verified {sputnikCouncil?.daoContract || "SputnikDAO"} council member
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-ink-muted">
+                            {isConnected ? `Council signer: ${accountId}` : "Connect a SputnikDAO council wallet to review"}
+                          </span>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={reviewingId === chg.id || (isConnected && !isCouncilMember)}
+                            onClick={() => handleReviewChange(chg.id, "REJECT")}
+                            className="btn-secondary px-3 py-1.5 rounded-lg text-xs text-danger border-danger-border flex items-center gap-1 focus-ring"
+                          >
+                            <XCircle className="h-3.5 w-3.5" />
+                            <span>Reject</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={reviewingId === chg.id || (isConnected && !canApprove)}
+                            onClick={() => handleReviewChange(chg.id, "APPROVE")}
+                            className="btn-primary px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 focus-ring"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span>Approve</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Immutable Audit Trail */}
+        <div className="surface-card rounded-2xl p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-line-subtle pb-3">
+            <div>
+              <h3 className="text-base font-bold text-ink flex items-center gap-2">
+                <History className="h-4 w-4 text-info" />
+                <span>Registry Audit Trail</span>
+              </h3>
+              <p className="text-xs text-ink-muted mt-0.5">
+                Append-only log of payee registrations, approvals, rejections, and 24h cooldowns.
+              </p>
+            </div>
+            <span className="text-[11px] font-mono text-ink-muted">{auditLog.length} events</span>
+          </div>
+
+          <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+            {auditLog.map((entry) => (
+              <div key={entry.id} className="surface-inset p-3.5 rounded-xl text-xs space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span
+                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                      entry.action === "APPROVED"
+                        ? "bg-success-soft text-success border-success-border"
+                        : entry.action === "REJECTED"
+                        ? "bg-danger-soft text-danger border-danger-border"
+                        : entry.action === "COOLDOWN_TRIGGERED"
+                        ? "bg-warning-soft text-warning border-warning-border"
+                        : "bg-info-soft text-info border-info-border"
+                    }`}
+                  >
+                    {entry.action}
+                  </span>
+                  <span className="text-[10px] font-mono text-ink-subtle">
+                    {new Date(entry.timestamp).toLocaleString()}
+                  </span>
+                </div>
+                <p className="text-ink-secondary leading-relaxed">{entry.summary}</p>
+                <p className="text-[10px] font-mono text-ink-muted">
+                  Actor: {entry.actor}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Registration Modal */}
       {showRegisterModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
@@ -536,6 +929,29 @@ export default function RecipientsPage() {
                   className="input-field px-3.5 py-2 text-xs font-mono"
                   required
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-ink-secondary">
+                  Vendor Official Domain (TOFU Cryptographic Proof, Optional)
+                </label>
+                <input
+                  type="text"
+                  value={regVendorDomain}
+                  onChange={(e) => setRegVendorDomain(e.target.value)}
+                  placeholder="e.g. acme-design.com"
+                  className="input-field px-3.5 py-2 text-xs font-mono"
+                />
+                {regVendorDomain.trim() && (
+                  <div className="surface-inset p-2.5 rounded-xl text-[10px] font-mono text-ink-muted space-y-1">
+                    <div className="text-ink-secondary font-sans font-semibold">
+                      Vendor must publish this DNS TXT record to prove day-one domain ownership:
+                    </div>
+                    <div className="text-accent-ink break-all">
+                      _paysure.{regVendorDomain.trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0]} TXT &quot;paysure-verify={regWallet.trim().toLowerCase() || "<near-account>"}&quot;
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Multi-Chain Section */}
@@ -641,7 +1057,93 @@ export default function RecipientsPage() {
                   disabled={registering}
                   className="btn-primary px-6 py-2.5 rounded-xl text-xs focus-ring"
                 >
-                  {registering ? "Registering Multi-Chain Payee..." : "Submit Registration"}
+                  {registering ? "Queuing for Approval..." : "Submit for Dual-Control Approval"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Propose Edit Modal */}
+      {editingTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-lg rounded-3xl bg-elevated border border-line p-6 sm:p-8 shadow-popover space-y-5 my-8 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-4 border-b border-line-subtle">
+              <div>
+                <h3 className="text-lg font-bold text-ink">Propose Payee Update</h3>
+                <p className="text-xs text-ink-muted mt-0.5">
+                  Active verified record stays locked until a second signer approves. Address edits trigger a 24h WARNING cooldown.
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingTarget(null)}
+                className="text-ink-subtle hover:text-ink text-sm p-1 rounded-lg focus-ring"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleProposeUpdate} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-ink-secondary">Legal / Display Name</label>
+                <input
+                  type="text"
+                  value={editDisplayName}
+                  onChange={(e) => setEditDisplayName(e.target.value)}
+                  className="input-field px-3.5 py-2 text-xs"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-ink-secondary">Primary NEAR Account ID</label>
+                <input
+                  type="text"
+                  value={editWallet}
+                  onChange={(e) => setEditWallet(e.target.value)}
+                  className="input-field px-3.5 py-2 text-xs font-mono"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-info">Base / Ethereum (EVM) Address</label>
+                <input
+                  type="text"
+                  value={editEvmWallet}
+                  onChange={(e) => setEditEvmWallet(e.target.value)}
+                  placeholder="0x..."
+                  className="input-field px-3.5 py-2 text-xs font-mono"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-ink-secondary">Reason for Change *</label>
+                <input
+                  type="text"
+                  value={editReason}
+                  onChange={(e) => setEditReason(e.target.value)}
+                  placeholder="e.g. Scheduled corporate key rotation"
+                  className="input-field px-3.5 py-2 text-xs"
+                  required
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end gap-3 border-t border-line-subtle">
+                <button
+                  type="button"
+                  onClick={() => setEditingTarget(null)}
+                  className="btn-secondary px-4 py-2 rounded-xl text-xs focus-ring"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEdit}
+                  className="btn-primary px-5 py-2.5 rounded-xl text-xs focus-ring"
+                >
+                  {submittingEdit ? "Submitting..." : "Queue Change Request"}
                 </button>
               </div>
             </form>

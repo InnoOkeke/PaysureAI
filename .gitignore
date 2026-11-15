@@ -23,3 +23,4 @@ typechain-types
 *.tsbuildinfo
 
 backend/prisma/schema.prisma
+docs/09-registry-dual-control-operator-guide.md

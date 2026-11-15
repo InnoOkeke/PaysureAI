@@ -18,6 +18,9 @@
   "license": "MIT",
   "devDependencies": {
     "near-sdk-js": "^2.0.0"
+  },
+  "overrides": {
+    "@types/node": "18.19.0"
   }
 }
 

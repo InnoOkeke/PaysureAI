@@ -32,6 +32,9 @@ model Recipient {
   stellarAddress     String?
   paymentId          String    @unique
   verificationStatus String    @default("UNVERIFIED") // VERIFIED, WARNING, UNVERIFIED, MISMATCH
+  vendorDomain       String?
+  domainVerified     Boolean   @default(false)
+  domainVerifiedAt   DateTime?
   notes              String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -155,5 +158,43 @@ model TreasuryPolicy {
   updatedAt                    DateTime @updatedAt
 
   @@index([accountId])
+}
+
+model PayeeChangeRequest {
+  id             String    @id @default(cuid())
+  recipientId    String
+  paymentId      String
+  displayName    String
+  changeType     String    // NEW_REGISTRATION | ADDRESS_UPDATE
+  status         String    @default("PENDING_APPROVAL") // PENDING_APPROVAL | APPROVED | REJECTED
+  requestedBy    String
+  approvedBy     String?
+  reason         String?
+  reviewNote     String?
+  previousValues Json?
+  proposedValues Json
+  sputnikProposal Json?
+  createdAt      DateTime  @default(now())
+  resolvedAt     DateTime?
+
+  @@index([paymentId])
+  @@index([status])
+}
+
+model PayeeAuditLog {
+  id             String   @id @default(cuid())
+  recipientId    String
+  paymentId      String
+  action         String   // REGISTERED_PENDING | CHANGE_PROPOSED | APPROVED | REJECTED | COOLDOWN_TRIGGERED
+  actor          String
+  requestedBy    String?
+  approvedBy     String?
+  summary        String
+  previousValues Json?
+  newValues      Json?
+  timestamp      DateTime @default(now())
+
+  @@index([paymentId])
+  @@index([action])
 }
 

@@ -1,4 +1,14 @@
 import { prisma } from "@/lib/prisma";
+import {
+  DEFAULT_SPUTNIK_DAO,
+  getSputnikCouncilMembers,
+  buildSputnikRegistryProposal,
+} from "@/lib/treasury/sputnikDao";
+import {
+  normalizeVendorDomain,
+  verifyVendorDomainTxt,
+  type DomainAttestationResult,
+} from "@/lib/security/domainAttestation";
 
 export interface CounterpartyRecord {
   id: string;
@@ -13,13 +23,124 @@ export interface CounterpartyRecord {
   stacksAddress?: string; // Stacks Bitcoin L2
   stellarAddress?: string; // Stellar
   verificationStatus: "VERIFIED" | "WARNING" | "UNVERIFIED" | "MISMATCH";
+  vendorDomain?: string;
+  domainVerified?: boolean;
+  domainVerifiedAt?: string;
   notes?: string;
+  cooldownUntil?: string;
+  lastUpdatedBy?: string;
+  lastApprovedBy?: string;
   createdAt: string;
+}
+
+export interface PayeeChangeValues {
+  displayName?: string;
+  walletAddress?: string;
+  evmAddress?: string;
+  bitcoinAddress?: string;
+  solanaAddress?: string;
+  xrpAddress?: string;
+  cosmosAddress?: string;
+  stacksAddress?: string;
+  stellarAddress?: string;
+  vendorDomain?: string;
+  domainVerified?: boolean;
+  notes?: string;
+}
+
+export interface PayeeChangeRequest {
+  id: string;
+  recipientId: string;
+  paymentId: string;
+  displayName: string;
+  changeType: "NEW_REGISTRATION" | "ADDRESS_UPDATE";
+  status: "PENDING_APPROVAL" | "APPROVED" | "REJECTED";
+  requestedBy: string;
+  approvedBy?: string;
+  reason?: string;
+  reviewNote?: string;
+  previousValues?: PayeeChangeValues;
+  proposedValues: PayeeChangeValues;
+  sputnikProposal?: ReturnType<typeof buildSputnikRegistryProposal>;
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export interface PayeeAuditEntry {
+  id: string;
+  recipientId: string;
+  paymentId: string;
+  action:
+    | "REGISTERED_PENDING"
+    | "CHANGE_PROPOSED"
+    | "APPROVED"
+    | "REJECTED"
+    | "COOLDOWN_TRIGGERED"
+    | "DOMAIN_ATTESTED";
+  actor: string;
+  requestedBy?: string;
+  approvedBy?: string;
+  summary: string;
+  previousValues?: PayeeChangeValues;
+  newValues?: PayeeChangeValues;
+  timestamp: string;
+}
+
+export class DuplicatePayeeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DuplicatePayeeError";
+  }
+}
+
+export class DualControlViolationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DualControlViolationError";
+  }
+}
+
+export class UnauthorizedApproverError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UnauthorizedApproverError";
+  }
+}
+
+export class ChangeRequestNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ChangeRequestNotFoundError";
+  }
+}
+
+export class TyposquattingRiskError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TyposquattingRiskError";
+  }
+}
+
+function levenshteinDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+    }
+  }
+  return dp[m][n];
 }
 
 // Global in-memory & file-compatible store for server lifetime
 declare global {
   var __paysure_recipients: CounterpartyRecord[] | undefined;
+  var __paysure_payee_changes: PayeeChangeRequest[] | undefined;
+  var __paysure_payee_audit: PayeeAuditEntry[] | undefined;
 }
 
 const DEFAULT_RECIPIENTS: CounterpartyRecord[] = [
@@ -88,6 +209,189 @@ function getStore(): CounterpartyRecord[] {
     globalThis.__paysure_recipients = [...DEFAULT_RECIPIENTS];
   }
   return globalThis.__paysure_recipients;
+}
+
+function getChangeStore(): PayeeChangeRequest[] {
+  if (!globalThis.__paysure_payee_changes) {
+    globalThis.__paysure_payee_changes = [];
+  }
+  return globalThis.__paysure_payee_changes;
+}
+
+function getAuditStore(): PayeeAuditEntry[] {
+  if (!globalThis.__paysure_payee_audit) {
+    globalThis.__paysure_payee_audit = [
+      {
+        id: "audit-seed-apex",
+        recipientId: "rec-apex-3",
+        paymentId: "apex-media",
+        action: "COOLDOWN_TRIGGERED",
+        actor: "treasury-council.sputnik-dao.testnet",
+        requestedBy: "apex-ops.testnet",
+        approvedBy: "treasury-council.sputnik-dao.testnet",
+        summary: "Key rotation flagged: 24h WARNING cooldown active on EVM settlement endpoint.",
+        timestamp: new Date().toISOString(),
+      },
+    ];
+  }
+  return globalThis.__paysure_payee_audit;
+}
+
+export function getConfiguredApprovers(): string[] {
+  const raw = process.env.PAYSURE_REGISTRY_APPROVERS;
+  if (!raw || raw.trim() === "") return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export async function verifySputnikCouncilApprover(accountId: string): Promise<{
+  daoContract: string;
+  source: "on-chain" | "env" | "unavailable";
+  members: string[];
+}> {
+  const clean = accountId.trim().toLowerCase();
+  if (!clean) {
+    throw new UnauthorizedApproverError("Approver NEAR account ID is required.");
+  }
+
+  const council = await getSputnikCouncilMembers();
+  if (council.members.length === 0) {
+    throw new UnauthorizedApproverError(
+      `Cannot verify SputnikDAO council membership on ${council.daoContract} (${council.error || "unavailable"}). Deploy the DAO or configure PAYSURE_REGISTRY_APPROVERS.`
+    );
+  }
+
+  if (!council.members.includes(clean)) {
+    throw new UnauthorizedApproverError(
+      `Account '${clean}' is not a verified council member of ${council.daoContract} (${council.source}). Only SputnikDAO council members can approve registry changes.`
+    );
+  }
+
+  return {
+    daoContract: council.daoContract,
+    source: council.source,
+    members: council.members,
+  };
+}
+
+export async function listPendingChanges(): Promise<PayeeChangeRequest[]> {
+  if (process.env.DATABASE_URL && process.env.DATABASE_URL.trim() !== "") {
+    try {
+      const rows = await (prisma as any).payeeChangeRequest.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+      if (rows && rows.length > 0) {
+        return rows.map((r: any) => ({
+          id: r.id,
+          recipientId: r.recipientId,
+          paymentId: r.paymentId,
+          displayName: r.displayName,
+          changeType: r.changeType,
+          status: r.status,
+          requestedBy: r.requestedBy,
+          approvedBy: r.approvedBy || undefined,
+          reason: r.reason || undefined,
+          reviewNote: r.reviewNote || undefined,
+          previousValues: r.previousValues || undefined,
+          proposedValues: r.proposedValues,
+          sputnikProposal: r.sputnikProposal || undefined,
+          createdAt: r.createdAt.toISOString(),
+          resolvedAt: r.resolvedAt ? r.resolvedAt.toISOString() : undefined,
+        }));
+      }
+    } catch {
+      // Fallback to memory store
+    }
+  }
+  return getChangeStore();
+}
+
+export async function listPayeeAuditLog(): Promise<PayeeAuditEntry[]> {
+  if (process.env.DATABASE_URL && process.env.DATABASE_URL.trim() !== "") {
+    try {
+      const rows = await (prisma as any).payeeAuditLog.findMany({
+        orderBy: { timestamp: "desc" },
+        take: 100,
+      });
+      if (rows && rows.length > 0) {
+        return rows.map((r: any) => ({
+          id: r.id,
+          recipientId: r.recipientId,
+          paymentId: r.paymentId,
+          action: r.action,
+          actor: r.actor,
+          requestedBy: r.requestedBy || undefined,
+          approvedBy: r.approvedBy || undefined,
+          summary: r.summary,
+          previousValues: r.previousValues || undefined,
+          newValues: r.newValues || undefined,
+          timestamp: r.timestamp.toISOString(),
+        }));
+      }
+    } catch {
+      // Fallback to memory store
+    }
+  }
+  return getAuditStore();
+}
+
+async function persistChangeRequestToDb(chg: PayeeChangeRequest): Promise<void> {
+  if (!process.env.DATABASE_URL || process.env.DATABASE_URL.trim() === "") return;
+  try {
+    await (prisma as any).payeeChangeRequest.upsert({
+      where: { id: chg.id },
+      update: {
+        status: chg.status,
+        approvedBy: chg.approvedBy,
+        reviewNote: chg.reviewNote,
+        resolvedAt: chg.resolvedAt ? new Date(chg.resolvedAt) : null,
+      },
+      create: {
+        id: chg.id,
+        recipientId: chg.recipientId,
+        paymentId: chg.paymentId,
+        displayName: chg.displayName,
+        changeType: chg.changeType,
+        status: chg.status,
+        requestedBy: chg.requestedBy,
+        approvedBy: chg.approvedBy,
+        reason: chg.reason,
+        reviewNote: chg.reviewNote,
+        previousValues: chg.previousValues as any,
+        proposedValues: chg.proposedValues as any,
+        sputnikProposal: chg.sputnikProposal as any,
+        createdAt: new Date(chg.createdAt),
+        resolvedAt: chg.resolvedAt ? new Date(chg.resolvedAt) : null,
+      },
+    });
+  } catch (e) {
+    console.warn("Could not persist change request to DB:", e);
+  }
+}
+
+async function persistAuditEntryToDb(entry: PayeeAuditEntry): Promise<void> {
+  if (!process.env.DATABASE_URL || process.env.DATABASE_URL.trim() === "") return;
+  try {
+    await (prisma as any).payeeAuditLog.create({
+      data: {
+        id: entry.id,
+        recipientId: entry.recipientId,
+        paymentId: entry.paymentId,
+        action: entry.action,
+        actor: entry.actor,
+        requestedBy: entry.requestedBy,
+        approvedBy: entry.approvedBy,
+        summary: entry.summary,
+        previousValues: entry.previousValues as any,
+        newValues: entry.newValues as any,
+        timestamp: new Date(entry.timestamp),
+      },
+    });
+  } catch (e) {
+    console.warn("Could not persist audit log to DB:", e);
+  }
 }
 
 export function detectChainFromAddress(addr: string): {
@@ -191,6 +495,9 @@ export async function listAllRecipients(): Promise<CounterpartyRecord[]> {
           stacksAddress: r.stacksAddress || undefined,
           stellarAddress: r.stellarAddress || undefined,
           verificationStatus: r.verificationStatus as any,
+          vendorDomain: r.vendorDomain || undefined,
+          domainVerified: Boolean(r.domainVerified),
+          domainVerifiedAt: r.domainVerifiedAt ? r.domainVerifiedAt.toISOString() : undefined,
           notes: r.notes || "",
           createdAt: r.createdAt.toISOString(),
         }));
@@ -368,4 +675,462 @@ export async function findCounterparty(cleanAddress: string, paymentId?: string)
   if (match) return match;
 
   return null;
+}
+
+async function syncRecipientToDb(record: CounterpartyRecord): Promise<void> {
+  if (!process.env.DATABASE_URL || process.env.DATABASE_URL.trim() === "") return;
+  try {
+    await prisma.recipient.upsert({
+      where: { paymentId: record.paymentId.toLowerCase() },
+      update: {
+        displayName: record.displayName,
+        walletAddress: record.walletAddress.toLowerCase(),
+        evmAddress: record.evmAddress,
+        bitcoinAddress: record.bitcoinAddress,
+        solanaAddress: record.solanaAddress,
+        xrpAddress: record.xrpAddress,
+        cosmosAddress: record.cosmosAddress,
+        stacksAddress: record.stacksAddress,
+        stellarAddress: record.stellarAddress,
+        verificationStatus: record.verificationStatus,
+        vendorDomain: record.vendorDomain,
+        domainVerified: Boolean(record.domainVerified),
+        domainVerifiedAt: record.domainVerifiedAt ? new Date(record.domainVerifiedAt) : null,
+        notes: record.notes,
+      },
+      create: {
+        displayName: record.displayName,
+        paymentId: record.paymentId.toLowerCase(),
+        walletAddress: record.walletAddress.toLowerCase(),
+        evmAddress: record.evmAddress,
+        bitcoinAddress: record.bitcoinAddress,
+        solanaAddress: record.solanaAddress,
+        xrpAddress: record.xrpAddress,
+        cosmosAddress: record.cosmosAddress,
+        stacksAddress: record.stacksAddress,
+        stellarAddress: record.stellarAddress,
+        verificationStatus: record.verificationStatus,
+        vendorDomain: record.vendorDomain,
+        domainVerified: Boolean(record.domainVerified),
+        domainVerifiedAt: record.domainVerifiedAt ? new Date(record.domainVerifiedAt) : null,
+        notes: record.notes,
+      },
+    });
+  } catch (e) {
+    console.warn("Could not sync recipient to DB:", e);
+  }
+}
+
+export async function registerPendingCounterparty(
+  data: {
+    displayName: string;
+    paymentId: string;
+    walletAddress: string;
+    evmAddress?: string;
+    bitcoinAddress?: string;
+    solanaAddress?: string;
+    xrpAddress?: string;
+    cosmosAddress?: string;
+    stacksAddress?: string;
+    stellarAddress?: string;
+    vendorDomain?: string;
+    notes?: string;
+  },
+  requestedBy: string
+): Promise<{ recipient: CounterpartyRecord; changeRequest: PayeeChangeRequest }> {
+  const existing = await listAllRecipients();
+  const cleanAddr = data.walletAddress.trim().toLowerCase();
+  const cleanPaymentId = data.paymentId.trim().toLowerCase();
+  const cleanRequester = requestedBy.trim().toLowerCase();
+
+  const duplicate = existing.find(
+    (r) =>
+      r.paymentId.toLowerCase() === cleanPaymentId ||
+      r.walletAddress.toLowerCase() === cleanAddr
+  );
+  if (duplicate) {
+    throw new DuplicatePayeeError(
+      `Payee '${duplicate.displayName}' (${duplicate.paymentId} / ${duplicate.walletAddress}) already exists. Use 'Propose Edit' to request an approved update instead of overwriting.`
+    );
+  }
+
+  // Typosquatting / lookalike impersonation check against existing VERIFIED payees
+  const lookalike = existing.find((r) => {
+    if (r.verificationStatus !== "VERIFIED") return false;
+    const pidDist = levenshteinDistance(cleanPaymentId, r.paymentId.toLowerCase());
+    return pidDist > 0 && pidDist <= 2 && cleanPaymentId.length >= 4;
+  });
+  if (lookalike) {
+    throw new TyposquattingRiskError(
+      `Blocked potential lookalike/typosquatting handle '${cleanPaymentId}' — too similar to verified payee '${lookalike.paymentId}' (${lookalike.displayName}).`
+    );
+  }
+
+  const cleanDomain = data.vendorDomain ? normalizeVendorDomain(data.vendorDomain) || undefined : undefined;
+  let domainAttestation: DomainAttestationResult | null = null;
+  if (cleanDomain) {
+    domainAttestation = await verifyVendorDomainTxt(cleanDomain, cleanAddr);
+  }
+
+  const newRecord: CounterpartyRecord = {
+    id: `rec-${Date.now()}`,
+    displayName: data.displayName.trim(),
+    paymentId: cleanPaymentId,
+    walletAddress: cleanAddr,
+    evmAddress: data.evmAddress?.trim() || undefined,
+    bitcoinAddress: data.bitcoinAddress?.trim() || undefined,
+    solanaAddress: data.solanaAddress?.trim() || undefined,
+    xrpAddress: data.xrpAddress?.trim() || undefined,
+    cosmosAddress: data.cosmosAddress?.trim() || undefined,
+    stacksAddress: data.stacksAddress?.trim() || undefined,
+    stellarAddress: data.stellarAddress?.trim() || undefined,
+    verificationStatus: "UNVERIFIED",
+    vendorDomain: cleanDomain,
+    domainVerified: Boolean(domainAttestation?.verified),
+    domainVerifiedAt: domainAttestation?.verified ? domainAttestation.checkedAt : undefined,
+    notes: data.notes?.trim() || "Pending dual-control treasury verification.",
+    lastUpdatedBy: cleanRequester,
+    createdAt: new Date().toISOString(),
+  };
+
+  getStore().unshift(newRecord);
+  await syncRecipientToDb(newRecord);
+
+  const changeRequest: PayeeChangeRequest = {
+    id: `chg-${Date.now()}`,
+    recipientId: newRecord.id,
+    paymentId: newRecord.paymentId,
+    displayName: newRecord.displayName,
+    changeType: "NEW_REGISTRATION",
+    status: "PENDING_APPROVAL",
+    requestedBy: cleanRequester,
+    reason: "Initial multi-chain payee registration awaiting second-signer verification.",
+    proposedValues: {
+      displayName: newRecord.displayName,
+      walletAddress: newRecord.walletAddress,
+      evmAddress: newRecord.evmAddress,
+      bitcoinAddress: newRecord.bitcoinAddress,
+      solanaAddress: newRecord.solanaAddress,
+      xrpAddress: newRecord.xrpAddress,
+      cosmosAddress: newRecord.cosmosAddress,
+      stacksAddress: newRecord.stacksAddress,
+      stellarAddress: newRecord.stellarAddress,
+      vendorDomain: newRecord.vendorDomain,
+      domainVerified: newRecord.domainVerified,
+      notes: newRecord.notes,
+    },
+    createdAt: new Date().toISOString(),
+  };
+  changeRequest.sputnikProposal = buildSputnikRegistryProposal({
+    changeId: changeRequest.id,
+    paymentId: changeRequest.paymentId,
+    displayName: changeRequest.displayName,
+    changeType: changeRequest.changeType,
+    requestedBy: cleanRequester,
+    targetWallet: newRecord.walletAddress,
+  });
+
+  getChangeStore().unshift(changeRequest);
+  await persistChangeRequestToDb(changeRequest);
+
+  const auditEntry: PayeeAuditEntry = {
+    id: `audit-${Date.now()}`,
+    recipientId: newRecord.id,
+    paymentId: newRecord.paymentId,
+    action: "REGISTERED_PENDING",
+    actor: cleanRequester,
+    requestedBy: cleanRequester,
+    summary: `Registered '${newRecord.displayName}' as UNVERIFIED; queued for dual-control approval.`,
+    newValues: changeRequest.proposedValues,
+    timestamp: new Date().toISOString(),
+  };
+  getAuditStore().unshift(auditEntry);
+  await persistAuditEntryToDb(auditEntry);
+
+  return { recipient: newRecord, changeRequest };
+}
+
+export async function proposeCounterpartyUpdate(
+  paymentIdOrAddress: string,
+  proposedValues: PayeeChangeValues,
+  requestedBy: string,
+  reason?: string
+): Promise<PayeeChangeRequest> {
+  const all = await listAllRecipients();
+  const key = paymentIdOrAddress.trim().toLowerCase();
+  const target = all.find(
+    (r) => r.paymentId.toLowerCase() === key || r.walletAddress.toLowerCase() === key || r.id === paymentIdOrAddress
+  );
+
+  if (!target) {
+    throw new ChangeRequestNotFoundError(`Payee '${paymentIdOrAddress}' not found in registry.`);
+  }
+
+  const cleanRequester = requestedBy.trim().toLowerCase();
+  const previousValues: PayeeChangeValues = {
+    displayName: target.displayName,
+    walletAddress: target.walletAddress,
+    evmAddress: target.evmAddress,
+    bitcoinAddress: target.bitcoinAddress,
+    solanaAddress: target.solanaAddress,
+    xrpAddress: target.xrpAddress,
+    cosmosAddress: target.cosmosAddress,
+    stacksAddress: target.stacksAddress,
+    stellarAddress: target.stellarAddress,
+    notes: target.notes,
+  };
+
+  const cleanedProposed: PayeeChangeValues = {
+    displayName: proposedValues.displayName?.trim() || target.displayName,
+    walletAddress: proposedValues.walletAddress?.trim().toLowerCase() || target.walletAddress,
+    evmAddress: proposedValues.evmAddress !== undefined ? (proposedValues.evmAddress.trim() || undefined) : target.evmAddress,
+    bitcoinAddress: proposedValues.bitcoinAddress !== undefined ? (proposedValues.bitcoinAddress.trim() || undefined) : target.bitcoinAddress,
+    solanaAddress: proposedValues.solanaAddress !== undefined ? (proposedValues.solanaAddress.trim() || undefined) : target.solanaAddress,
+    xrpAddress: proposedValues.xrpAddress !== undefined ? (proposedValues.xrpAddress.trim() || undefined) : target.xrpAddress,
+    cosmosAddress: proposedValues.cosmosAddress !== undefined ? (proposedValues.cosmosAddress.trim() || undefined) : target.cosmosAddress,
+    stacksAddress: proposedValues.stacksAddress !== undefined ? (proposedValues.stacksAddress.trim() || undefined) : target.stacksAddress,
+    stellarAddress: proposedValues.stellarAddress !== undefined ? (proposedValues.stellarAddress.trim() || undefined) : target.stellarAddress,
+    notes: proposedValues.notes !== undefined ? proposedValues.notes.trim() : target.notes,
+  };
+
+  const changeRequest: PayeeChangeRequest = {
+    id: `chg-${Date.now()}`,
+    recipientId: target.id,
+    paymentId: target.paymentId,
+    displayName: target.displayName,
+    changeType: "ADDRESS_UPDATE",
+    status: "PENDING_APPROVAL",
+    requestedBy: cleanRequester,
+    reason: reason?.trim() || "Counterparty settlement endpoint update proposed.",
+    previousValues,
+    proposedValues: cleanedProposed,
+    createdAt: new Date().toISOString(),
+  };
+  changeRequest.sputnikProposal = buildSputnikRegistryProposal({
+    changeId: changeRequest.id,
+    paymentId: changeRequest.paymentId,
+    displayName: changeRequest.displayName,
+    changeType: changeRequest.changeType,
+    requestedBy: cleanRequester,
+    targetWallet: cleanedProposed.walletAddress || target.walletAddress,
+  });
+
+  getChangeStore().unshift(changeRequest);
+  await persistChangeRequestToDb(changeRequest);
+
+  const auditEntry: PayeeAuditEntry = {
+    id: `audit-${Date.now()}`,
+    recipientId: target.id,
+    paymentId: target.paymentId,
+    action: "CHANGE_PROPOSED",
+    actor: cleanRequester,
+    requestedBy: cleanRequester,
+    summary: `Proposed update to '${target.displayName}' (${target.paymentId}). Live verified record remains locked until approved.`,
+    previousValues,
+    newValues: cleanedProposed,
+    timestamp: new Date().toISOString(),
+  };
+  getAuditStore().unshift(auditEntry);
+  await persistAuditEntryToDb(auditEntry);
+
+  return changeRequest;
+}
+
+export async function reviewPayeeChangeRequest(
+  changeId: string,
+  decision: "APPROVE" | "REJECT",
+  approverAccountId: string,
+  reviewNote?: string
+): Promise<{ changeRequest: PayeeChangeRequest; recipient?: CounterpartyRecord }> {
+  const cleanApprover = approverAccountId.trim().toLowerCase();
+  await verifySputnikCouncilApprover(cleanApprover);
+
+  const changes = getChangeStore();
+  let req = changes.find((c) => c.id === changeId);
+  if (!req) {
+    const dbChanges = await listPendingChanges();
+    req = dbChanges.find((c) => c.id === changeId);
+    if (req) {
+      changes.unshift(req);
+    }
+  }
+  if (!req) {
+    throw new ChangeRequestNotFoundError(`Change request '${changeId}' not found.`);
+  }
+  if (req.status !== "PENDING_APPROVAL") {
+    throw new DuplicatePayeeError(`Change request '${changeId}' is already ${req.status}.`);
+  }
+
+  // Strict Dual-Control (Four-Eyes Principle): requester cannot self-approve
+  if (req.requestedBy.toLowerCase() === cleanApprover) {
+    throw new DualControlViolationError(
+      `Dual-control violation: '${cleanApprover}' submitted this request and cannot self-approve it. Connect a different authorized NEAR account.`
+    );
+  }
+
+  req.approvedBy = cleanApprover;
+  req.reviewNote = reviewNote?.trim() || undefined;
+  req.resolvedAt = new Date().toISOString();
+
+  if (decision === "REJECT") {
+    req.status = "REJECTED";
+    await persistChangeRequestToDb(req);
+
+    const rejectAudit: PayeeAuditEntry = {
+      id: `audit-${Date.now()}`,
+      recipientId: req.recipientId,
+      paymentId: req.paymentId,
+      action: "REJECTED",
+      actor: cleanApprover,
+      requestedBy: req.requestedBy,
+      approvedBy: cleanApprover,
+      summary: `Rejected ${req.changeType === "NEW_REGISTRATION" ? "registration" : "update"} for '${req.displayName}' (${req.paymentId}).`,
+      timestamp: new Date().toISOString(),
+    };
+    getAuditStore().unshift(rejectAudit);
+    await persistAuditEntryToDb(rejectAudit);
+    return { changeRequest: req };
+  }
+
+  // APPROVE
+  req.status = "APPROVED";
+  const store = getStore();
+  let target = store.find(
+    (r) => r.id === req.recipientId || r.paymentId.toLowerCase() === req.paymentId.toLowerCase()
+  );
+
+  // If record came only from DB and wasn't in memory store yet, load & push
+  if (!target) {
+    const all = await listAllRecipients();
+    const found = all.find(
+      (r) => r.id === req.recipientId || r.paymentId.toLowerCase() === req.paymentId.toLowerCase()
+    );
+    if (found) {
+      store.unshift({ ...found });
+      target = store[0];
+    }
+  }
+
+  if (!target) {
+    throw new ChangeRequestNotFoundError(`Target recipient '${req.paymentId}' could not be located.`);
+  }
+
+  const addrFields: (keyof PayeeChangeValues)[] = [
+    "walletAddress",
+    "evmAddress",
+    "bitcoinAddress",
+    "solanaAddress",
+    "xrpAddress",
+    "cosmosAddress",
+    "stacksAddress",
+    "stellarAddress",
+  ];
+  const addressChanged =
+    req.changeType === "ADDRESS_UPDATE" &&
+    addrFields.some(
+      (k) => (req.previousValues?.[k] || "") !== (req.proposedValues[k] || "")
+    );
+
+  target.displayName = req.proposedValues.displayName || target.displayName;
+  target.walletAddress = (req.proposedValues.walletAddress || target.walletAddress).toLowerCase();
+  target.evmAddress = req.proposedValues.evmAddress;
+  target.bitcoinAddress = req.proposedValues.bitcoinAddress;
+  target.solanaAddress = req.proposedValues.solanaAddress;
+  target.xrpAddress = req.proposedValues.xrpAddress;
+  target.cosmosAddress = req.proposedValues.cosmosAddress;
+  target.stacksAddress = req.proposedValues.stacksAddress;
+  target.stellarAddress = req.proposedValues.stellarAddress;
+  target.lastUpdatedBy = req.requestedBy;
+  target.lastApprovedBy = cleanApprover;
+
+  if (addressChanged) {
+    const cooldownEnd = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    target.verificationStatus = "WARNING";
+    target.cooldownUntil = cooldownEnd;
+    target.notes = `Key/address updated by ${req.requestedBy} & approved by ${cleanApprover}. 24h cooldown active until ${cooldownEnd.slice(0, 16)}Z.`;
+  } else {
+    target.verificationStatus = "VERIFIED";
+    target.cooldownUntil = undefined;
+    target.notes = req.proposedValues.notes || `Verified by dual-control approver ${cleanApprover}.`;
+  }
+
+  await syncRecipientToDb(target);
+  await persistChangeRequestToDb(req);
+
+  const approveAudit: PayeeAuditEntry = {
+    id: `audit-${Date.now()}`,
+    recipientId: target.id,
+    paymentId: target.paymentId,
+    action: addressChanged ? "COOLDOWN_TRIGGERED" : "APPROVED",
+    actor: cleanApprover,
+    requestedBy: req.requestedBy,
+    approvedBy: cleanApprover,
+    summary: addressChanged
+      ? `Approved address update for '${target.displayName}' (${target.paymentId}). 24h WARNING cooldown activated.`
+      : `Approved '${target.displayName}' (${target.paymentId}) as VERIFIED.`,
+    previousValues: req.previousValues,
+    newValues: req.proposedValues,
+    timestamp: new Date().toISOString(),
+  };
+  getAuditStore().unshift(approveAudit);
+  await persistAuditEntryToDb(approveAudit);
+
+  return { changeRequest: req, recipient: target };
+}
+
+export async function verifyRecipientDomainAttestation(
+  paymentId: string,
+  domainOverride?: string,
+  actorAccountId = "system-dns-verifier"
+): Promise<{ attestation: DomainAttestationResult; recipient: CounterpartyRecord }> {
+  const all = await listAllRecipients();
+  const target = all.find(
+    (r) => r.paymentId.toLowerCase() === paymentId.trim().toLowerCase()
+  );
+  if (!target) {
+    throw new ChangeRequestNotFoundError(`Counterparty '${paymentId}' not found.`);
+  }
+
+  const domainToCheck = domainOverride?.trim() || target.vendorDomain;
+  if (!domainToCheck) {
+    throw new Error("No vendorDomain provided or stored on this counterparty.");
+  }
+
+  const attestation = await verifyVendorDomainTxt(domainToCheck, target.walletAddress);
+  const store = getStore();
+  let memTarget = store.find(
+    (r) => r.paymentId.toLowerCase() === target.paymentId.toLowerCase()
+  );
+  if (!memTarget) {
+    memTarget = target;
+    store.unshift(memTarget);
+  }
+
+  memTarget.vendorDomain = attestation.domain;
+  memTarget.domainVerified = attestation.verified;
+  if (attestation.verified) {
+    memTarget.domainVerifiedAt = attestation.checkedAt;
+  }
+
+  await syncRecipientToDb(memTarget);
+
+  if (attestation.verified) {
+    const auditEntry: PayeeAuditEntry = {
+      id: `audit-${Date.now()}`,
+      recipientId: memTarget.id,
+      paymentId: memTarget.paymentId,
+      action: "DOMAIN_ATTESTED",
+      actor: actorAccountId,
+      summary: `Cryptographic DNS TXT proof verified: ${attestation.matchedHost} -> ${memTarget.walletAddress}.`,
+      newValues: {
+        vendorDomain: attestation.domain,
+        domainVerified: true,
+      },
+      timestamp: attestation.checkedAt,
+    };
+    getAuditStore().unshift(auditEntry);
+    await persistAuditEntryToDb(auditEntry);
+  }
+
+  return { attestation, recipient: memTarget };
 }

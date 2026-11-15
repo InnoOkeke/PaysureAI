@@ -8,16 +8,33 @@ export class PayeeProfile {
   accountId: string;
   paymentId: string;
   legalName: string;
+  status: "VERIFIED" | "WARNING" | "UNVERIFIED";
   isVerified: boolean;
   registeredAt: string;
+  cooldownUntil: string;
+  proposedBy: string;
+  approvedBy: string;
   notes: string;
 
-  constructor(accountId: string, paymentId: string, legalName: string, notes: string) {
+  constructor(
+    accountId: string,
+    paymentId: string,
+    legalName: string,
+    notes: string,
+    status: "VERIFIED" | "WARNING" | "UNVERIFIED" = "UNVERIFIED",
+    proposedBy = "",
+    approvedBy = "",
+    cooldownUntil = "0"
+  ) {
     this.accountId = accountId;
     this.paymentId = paymentId;
     this.legalName = legalName;
-    this.isVerified = true;
+    this.status = status;
+    this.isVerified = status === "VERIFIED";
     this.registeredAt = near.blockTimestamp().toString();
+    this.cooldownUntil = cooldownUntil;
+    this.proposedBy = proposedBy;
+    this.approvedBy = approvedBy;
     this.notes = notes;
   }
 }
@@ -58,6 +75,7 @@ export class PaymentRecord {
  */
 @NearBindgen({})
 export class PaySureContract {
+  daoContract: string = "paysure-council.sputnik-dao.testnet";
   payees: UnorderedMap<PayeeProfile> = new UnorderedMap<PayeeProfile>("payees_map");
   settledInvoices: UnorderedMap<string> = new UnorderedMap<string>("invoices_map");
   payments: UnorderedMap<PaymentRecord> = new UnorderedMap<PaymentRecord>("payments_map");
@@ -65,10 +83,25 @@ export class PaySureContract {
   totalPaymentsCount: bigint = BigInt(0);
 
   /**
-   * Register or update a payee identity on the Confirmation of Payee directory.
+   * Configure the governing SputnikDAO contract (can only be updated by the current DAO).
    */
   @call({})
-  register_payee({
+  set_dao_contract({ daoContract }: { daoContract: string }): string {
+    const caller = near.predecessorAccountId();
+    assert(
+      caller === this.daoContract || caller === near.currentAccountId(),
+      "Only current SputnikDAO or contract deployer can update daoContract"
+    );
+    assert(daoContract.length > 0, "daoContract cannot be empty");
+    this.daoContract = daoContract;
+    return this.daoContract;
+  }
+
+  /**
+   * Propose a new payee identity (starts UNVERIFIED; cannot overwrite an existing VERIFIED payee).
+   */
+  @call({})
+  propose_payee({
     paymentId,
     legalName,
     notes = "",
@@ -81,10 +114,75 @@ export class PaySureContract {
     assert(paymentId.length > 0, "Payment ID cannot be empty");
     assert(legalName.length > 0, "Legal entity name cannot be empty");
 
-    const profile = new PayeeProfile(caller, paymentId, legalName, notes);
+    const existing = this.payees.get(caller);
+    assert(
+      !existing || existing.status === "UNVERIFIED",
+      "Verified payee already exists; updates must pass through SputnikDAO council proposal"
+    );
+
+    const profile = new PayeeProfile(
+      caller,
+      paymentId,
+      legalName,
+      notes,
+      "UNVERIFIED",
+      caller,
+      ""
+    );
     this.payees.set(caller, profile);
 
-    near.log(`[PaySure] Payee registered: ${caller} -> ${legalName} (${paymentId})`);
+    near.log(`[PaySure] Payee proposed (UNVERIFIED): ${caller} -> ${legalName} (${paymentId})`);
+    return profile;
+  }
+
+  /**
+   * Verify or update a payee identity on-chain.
+   * STRICTLY GATED: Only callable by the SputnikDAO multisig contract after council vote.
+   */
+  @call({})
+  set_verified_payee({
+    accountId,
+    paymentId,
+    legalName,
+    notes = "",
+    triggerCooldown = false,
+  }: {
+    accountId: string;
+    paymentId: string;
+    legalName: string;
+    notes?: string;
+    triggerCooldown?: boolean;
+  }): PayeeProfile {
+    const caller = near.predecessorAccountId();
+    assert(
+      caller === this.daoContract,
+      `Unauthorized: only SputnikDAO (${this.daoContract}) can verify or update payees`
+    );
+    assert(accountId.length > 1, "Invalid accountId");
+    assert(paymentId.length > 0, "Payment ID cannot be empty");
+    assert(legalName.length > 0, "Legal entity name cannot be empty");
+
+    const existing = this.payees.get(accountId);
+    const isRotation = Boolean(existing && triggerCooldown);
+    const cooldownNs = isRotation
+      ? (near.blockTimestamp() + BigInt(24) * BigInt(60) * BigInt(60) * BigInt(1_000_000_000)).toString()
+      : "0";
+
+    const profile = new PayeeProfile(
+      accountId,
+      paymentId,
+      legalName,
+      notes,
+      isRotation ? "WARNING" : "VERIFIED",
+      existing?.proposedBy || caller,
+      caller,
+      cooldownNs
+    );
+    this.payees.set(accountId, profile);
+
+    near.log(
+      `[PaySure DAO] Payee ${isRotation ? "rotated (24h WARNING)" : "VERIFIED"} by ${caller}: ${accountId} -> ${legalName}`
+    );
     return profile;
   }
 
@@ -165,7 +263,7 @@ export class PaySureContract {
     accountId: string;
     expectedName?: string;
   }): {
-    status: "VERIFIED" | "MISMATCH" | "UNVERIFIED";
+    status: "VERIFIED" | "WARNING" | "MISMATCH" | "UNVERIFIED";
     legalName: string | null;
     isVerified: boolean;
     reason: string;
@@ -178,6 +276,15 @@ export class PaySureContract {
         legalName: null,
         isVerified: false,
         reason: `Account '${accountId}' is not registered in the PaySure Confirmation of Payee registry.`,
+      };
+    }
+
+    if (profile.status === "UNVERIFIED") {
+      return {
+        status: "UNVERIFIED",
+        legalName: profile.legalName,
+        isVerified: false,
+        reason: `Account '${accountId}' (${profile.legalName}) is pending SputnikDAO council verification.`,
       };
     }
 
@@ -194,11 +301,23 @@ export class PaySureContract {
       };
     }
 
+    if (
+      profile.status === "WARNING" ||
+      (profile.cooldownUntil && BigInt(profile.cooldownUntil) > near.blockTimestamp())
+    ) {
+      return {
+        status: "WARNING",
+        legalName: profile.legalName,
+        isVerified: false,
+        reason: `Key rotation cooldown active for '${profile.legalName}' (${accountId}). Exercise caution before sending funds.`,
+      };
+    }
+
     return {
       status: "VERIFIED",
       legalName: profile.legalName,
       isVerified: true,
-      reason: `Account '${accountId}' is verified and matches legal entity '${profile.legalName}'.`,
+      reason: `Account '${accountId}' is verified by SputnikDAO and matches legal entity '${profile.legalName}'.`,
     };
   }
 

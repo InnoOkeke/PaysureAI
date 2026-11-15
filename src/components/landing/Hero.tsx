@@ -25,9 +25,7 @@ export function Hero() {
           {/* Minimalist Eyebrow Capsule */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-subtle border border-line-subtle text-[12px] text-ink-muted mb-8 whitespace-nowrap">
             <span className="h-1.5 w-1.5 rounded-full bg-success" />
-            <span className="font-medium text-ink">PaySure Core</span>
-            <span className="text-ink-subtle">&middot;</span>
-            <span>Institutional Settlement on NEAR</span>
+            <span className="font-medium text-ink">Verified Payee Settlement on NEAR</span>
           </div>
 
           {/* Apple-Inspired Display Headline */}
@@ -37,7 +35,7 @@ export function Hero() {
 
           {/* Executive Subheadline */}
           <p className="mt-6 text-base sm:text-lg lg:text-[19px] text-ink-muted max-w-2xl font-normal leading-[1.6] tracking-[-0.01em]">
-            Cryptographic Confirmation of Payee, zero-trust invoice intelligence, and programmable treasury guardrails &mdash; engineered for instant finality.
+            Cryptographic Confirmation of Payee, autonomous invoice verification, and programmable treasury guardrails built for instant finality.
           </p>
 
           {/* Unified Pill Action Cluster */}

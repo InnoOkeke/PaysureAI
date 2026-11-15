@@ -1,10 +1,15 @@
 import crypto from "crypto";
 import { utils } from "near-api-js";
 
-const AUTH_SECRET =
-  process.env.PAYSURE_AUTH_SECRET ||
-  process.env.NEXTAUTH_SECRET ||
-  "paysure-dev-ephemeral-secret-change-in-prod";
+function getAuthSecret(): string {
+  const secret = process.env.PAYSURE_AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret || secret.trim().length < 16) {
+    throw new Error(
+      "PAYSURE_AUTH_SECRET is not configured. Set a strong secret (at least 16 chars) in environment variables."
+    );
+  }
+  return secret;
+}
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const RPC_URL =
@@ -54,7 +59,7 @@ export function createAuthChallenge(
     expiresAt,
   });
   const sig = crypto
-    .createHmac("sha256", AUTH_SECRET)
+    .createHmac("sha256", getAuthSecret())
     .update(payload)
     .digest("base64url");
   const token = `${Buffer.from(payload).toString("base64url")}.${sig}`;
@@ -162,7 +167,7 @@ export async function verifySignedNearProof(
 
     const payloadJson = Buffer.from(encodedPayload, "base64url").toString("utf8");
     const expectedHmac = crypto
-      .createHmac("sha256", AUTH_SECRET)
+      .createHmac("sha256", getAuthSecret())
       .update(payloadJson)
       .digest("base64url");
 

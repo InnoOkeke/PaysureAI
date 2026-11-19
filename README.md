@@ -22,10 +22,10 @@ Engineered across three foundational pillars:
 | Pillar ID | Pillar Name | Platform Focus | PaySure AI Implementation |
 | :--- | :--- | :--- | :--- |
 | `realworld` | **Corporate Invoicing & Settlement** | Invoicing, payroll, remittances, and stablecoins. | • **Multimodal AI OCR**: Drag-and-drop PDF/image parsing.<br>• **NEP-141 USDC & NEAR**: Sub-second settlement.<br>• **Audit-Ready PDF Receipts**: Downloadable compliance receipts stamped with on-chain verification. |
-| `security` | **AI Security & Defense** | Spending limits, wallet safeguards, scam detection. | • **OutLayer Integration**: Transaction security attestation.<br>• **Confirmation of Payee**: Eliminates typosquatting (`satosh1.near` vs `satoshi.near`).<br>• **Treasury Guardrails** (`/treasury`): Single-tx limits, 24h velocity meter, and 1-click killswitch. |
+| `security` | **AI Security & Defense** | Spending limits, wallet safeguards, scam detection. | • **OutLayer & NEP-413 Auth**: Cryptographic wallet signatures (`view_access_key`) and transaction attestation.<br>• **Confirmation of Payee & TOFU Proof**: Typosquatting defense, DNS TXT domain attestation (`_paysure.<domain>`), and 24h key-rotation cooldowns.<br>• **Treasury Guardrails** (`/treasury`): Single-tx limits, 24h velocity meter, and 1-click killswitch. |
 | `business` | **Autonomous Business & Intents** | AI businesses managing procurement and treasuries. | • **Conversational Intent Resolver**: Natural language prompts.<br>• **Auto-Approval Threshold**: Instant settlement under $\le \$100$.<br>• **SputnikDAO Escalation**: High-value payments route to council multi-sig. |
 | `agents` | **Agent Economy & Swarms** | Agents that earn, spend, and get hired. | • **NEAR Agent Market** (`market.near.ai`): Registered agent manifest at `/api/agent`.<br>• **MCP Server**: Model Context Protocol endpoint at `/api/agent/mcp` for Claude Desktop & swarms. |
-| `social` | **Social Money & Multisig** | Shared budgets and DAO governance. | • **SputnikDAO & Trezu Multi-Sig**: Direct on-chain `add_proposal` crafting to `paysure-council.sputnik-dao.testnet`. |
+| `social` | **Social Money & Multisig** | Shared budgets and DAO governance. | • **SputnikDAO & Four-Eyes Governance**: Live `get_policy` council gating (`paysure-council.sputnik-dao.testnet`) and on-chain `FunctionCall` proposals to `leprof.testnet` (`set_verified_payee`). |
 
 ---
 
@@ -59,7 +59,7 @@ flowchart TD
     end
 
     subgraph NEAR ["NEAR Protocol Settlement Core"]
-        G["Confirmation of Payee Registry<br/>(contracts/near/src/index.ts)"]
+        G["Confirmation of Payee Registry Contract<br/>(leprof.testnet / paysure-council.sputnik-dao.testnet)"]
         H["NEAR Native Settlement<br/>(NEAR & NEP-141 USDC)"]
         I["NEAR Chain Signatures MPC<br/>(v1.signer-prod.testnet)"]
     end
@@ -94,13 +94,19 @@ flowchart TD
   - *"Transfer $120 to Satoshi Dev on Arbitrum"*
 - Automatically resolves the counterparty from Confirmation of Payee, selects the settlement rail, derives the foreign MPC address, and evaluates the payment against Treasury policies.
 
-### 2. Confirmation of Payee (Anti-Spoofing & Lookalike Defense)
-- Unlike hex addresses, NEAR accounts are human-readable (`alice.near`, `acme-design.testnet`). The primary attack vector in Web3 invoicing is lookalike homoglyph spoofing (`satosh1.near` vs `satoshi.near`).
-- PaySure AI maintains an on-chain registry mapping accounts to verified legal entities with 4 safety tiers:
-  - `VERIFIED`: Target account matches the registered corporate identity.
-  - `WARNING`: Recent key rotation or profile changes flagged for review.
-  - `UNVERIFIED`: Account not registered in directory; proceed with caution.
-  - `MISMATCH`: The account extracted from the invoice contradicts known payee data (High-Risk Fraud alert).
+### 2. Confirmation of Payee (Anti-Spoofing, Dual-Control & TOFU Security)
+- Unlike hex addresses, NEAR accounts are human-readable (`alice.near`, `acme-design.testnet`). The primary attack vectors in Web3 invoicing are lookalike spoofing (`satosh1.near` vs `satoshi.near`) and first-time invoice impersonation (Trust on First Use).
+- PaySure AI enforces defense-in-depth across the off-chain registry, Postgres audit log, and on-chain NEAR contract with 4 safety tiers:
+  - `VERIFIED`: Target account matches the approved corporate entity.
+  - `WARNING`: Recent address update or key rotation triggers a **24-hour cooldown window** before settlement.
+  - `UNVERIFIED`: Newly proposed or unregistered account; blocked from passing Confirmation of Payee until approved.
+  - `MISMATCH`: Account extracted from the invoice contradicts known payee data (High-Risk Fraud alert).
+- **Registry Security Architecture**:
+  - **NEP-413 Cryptographic Wallet Authentication**: Every registry mutation requires a fresh 5-minute HMAC-signed challenge (`/api/auth/challenge`) signed by the caller's NEAR wallet and verified against on-chain `FullAccess` keys via NEAR RPC (`view_access_key`).
+  - **SputnikDAO Council Gating & Four-Eyes Dual Control**: New payees start `UNVERIFIED` and edits keep the live `VERIFIED` record locked until approved by a separate council member of `paysure-council.sputnik-dao.testnet` (checked live via `get_policy` RPC), crafting SputnikDAO v2 `FunctionCall` proposals targeting `set_verified_payee`.
+  - **Cryptographic Domain Attestation (Day-One TOFU Proof)**: Vendors prove domain-to-wallet ownership by publishing `_paysure.<domain> TXT "paysure-verify=<near-account>"`, verified via Cloudflare and Google DNS-over-HTTPS (`POST /api/recipients/verify-domain`).
+  - **Typosquatting Guard & 24-Hour Key-Rotation Cooldown**: Lookalike `paymentId` handles are rejected (`409 Conflict` via Levenshtein distance check), and approved address changes automatically enter a 24-hour `WARNING` cooldown.
+  - **Deployed NEAR Smart Contract (`leprof.testnet`)**: `PaySureContract` (`contracts/near/src/index.ts`) deployed on NEAR Testnet with non-overwriting `propose_payee`, DAO-restricted `set_verified_payee` (initialized via `set_dao_contract`), and `verify_payee` cooldown checks.
 
 ### 3. Autonomous Treasury Guardrails (`/treasury`)
 - **Single Transaction Ceilings**: Human-defined maximum for any single transfer ($500 USD).
@@ -116,10 +122,9 @@ flowchart TD
 - **Adversarial Input Defense**: Invoice data is treated as untrusted input with strict Zod validation schemas to prevent prompt-injection attacks.
 
 ### 5. Multi-Wallet Selector Support
-- Seamless connection via official NEAR Wallet Selector:
-  - **MyNearWallet** (Official Web & Mobile)
+- Seamless connection via official NEAR Wallet Selector (with **Meteor Wallet** prioritized):
+  - **Meteor Wallet** (Primary Web & Browser Extension — `https://wallet.meteorwallet.app`)
   - **HOT Wallet** (HERE Wallet / Telegram Chain Abstraction)
-  - **Meteor Wallet** (Browser Extension & Web)
   - **Nightly Wallet** (Multi-Chain Extension & Mobile)
   - **Sender Wallet** (Fast Non-Custodial Browser Extension)
 
@@ -153,23 +158,24 @@ PaysureAI/
 │   │   ├── history/             # Transaction history & PDF receipts
 │   │   └── api/
 │   │       ├── agent/           # Agent Market manifest & Model Context Protocol (MCP)
+│   │       ├── auth/challenge/  # NEP-413 HMAC challenge issuance endpoint
 │   │       ├── near/intents/    # NEAR Intent creation & resolution APIs
 │   │       ├── ai/assistant/    # Route-aware Copilot & NEAR.AI Cloud inference
-│   │       └── recipients/      # Payee verification endpoints
+│   │       └── recipients/      # Payee registry, dual-control changes/, verify/, & verify-domain/
 │   ├── components/
 │   │   ├── assistant/           # Floating Autonomous Copilot
 │   │   ├── navigation/          # Navbar (NEAR Account balance, switcher) & Footer
-│   │   └── brand/               # PaySure AI Gateway Logo components
+│   │   └── brand/               # PaySure AI Logo components (515x515 monochrome PNG)
 │   ├── context/
-│   │   └── NearWalletContext.tsx # Native NEAR wallet connection state
+│   │   └── NearWalletContext.tsx # Native NEAR wallet connection & NEP-413 signing
 │   └── lib/
 │       ├── ai/                  # NEAR.AI Cloud client configuration
-│       ├── security/            # OutLayer agent security evaluation
-│       ├── near/                # Intent resolver & Chain Signatures MPC
+│       ├── security/            # OutLayer defense & DNS TXT domainAttestation.ts
+│       ├── near/                # NEP-413 auth.ts, Intent resolver & Chain Signatures MPC
 │       ├── treasury/            # Policy Engine & SputnikDAO integration
 │       └── prisma.ts            # Prisma client singleton
 ├── prisma/
-│   └── schema.prisma            # Users, Recipients, Invoices, Payments, Receipts
+│   └── schema.prisma            # Users, Recipients, PayeeChangeRequest, PayeeAuditLog, Invoices, Payments, Receipts
 └── README.md                    # Platform documentation
 ```
 
@@ -180,7 +186,7 @@ PaysureAI/
 ### 1. Prerequisites
 - Node.js v18+ or v20+
 - `pnpm` (recommended) or `npm`
-- NEAR Testnet account (free at [testnet.mynearwallet.com](https://testnet.mynearwallet.com))
+- NEAR Testnet account (via [Meteor Wallet](https://wallet.meteorwallet.app))
 
 ### 2. Installation
 ```bash
@@ -194,9 +200,13 @@ Create a `.env` file from `.env.example`:
 ```bash
 cp .env.example .env
 ```
-Fill in your database URL and AI API key:
+Fill in your database URL, auth secret, contract IDs, and AI API key:
 ```env
 DATABASE_URL="postgres://..."
+PAYSURE_AUTH_SECRET="your-random-hex-secret-at-least-16-chars"
+PAYSURE_REGISTRY_CONTRACT="leprof.testnet"
+NEXT_PUBLIC_PAYSURE_CONTRACT="leprof.testnet"
+NEXT_PUBLIC_SPUTNIK_DAO_CONTRACT="paysure-council.sputnik-dao.testnet"
 NEARAI_API_KEY="your-nearai-key"
 ```
 
@@ -258,9 +268,13 @@ Set `BACKEND_URL="http://localhost:4000"` in the web app `.env` to proxy all `/a
 | `POST` | `/api/intents/:id/confirm` | Atomically confirm a pending action |
 | `POST` | `/api/intents/:id/cancel` | Cancel a pending action |
 | `POST` | `/api/intents/:id/execute` | Record the signed transaction hash |
+| `GET` | `/api/auth/challenge` | Issue 5-minute HMAC-signed NEP-413 challenge nonce |
 | `GET/POST` | `/api/invoices` | Invoice list and creation |
 | `GET/POST` | `/api/payments` | Payment ledger and settlement recording |
+| `GET/POST/PATCH` | `/api/recipients` | Directory listing, NEP-413 `UNVERIFIED` registration, and locked edit proposals |
+| `GET/POST` | `/api/recipients/changes` | Pending approvals queue, audit log, and SputnikDAO council approve/reject |
 | `POST` | `/api/recipients/verify` | Live NEAR RPC + registry verification |
+| `POST` | `/api/recipients/verify-domain` | Cryptographic DNS TXT TOFU domain attestation (`_paysure.<domain>`) |
 | `GET` | `/api/dashboard` | Dashboard metrics |
 | `GET/POST` | `/api/agent` | Agent Market manifest and tool dispatch |
 | `GET/POST` | `/api/agent/mcp` | MCP manifest and JSON-RPC tools |
@@ -274,7 +288,7 @@ Set `BACKEND_URL="http://localhost:4000"` in the web app `.env` to proxy all `/a
 
 ## 🧪 Demonstration Workflow
 
-1. **Connect NEAR Account**: Connect in the top navbar (e.g. MyNearWallet, HOT, Meteor, Nightly, Sender).
+1. **Connect NEAR Account**: Connect in the top navbar (e.g. Meteor, HOT, Nightly, Sender).
 2. **Conversational Intent**: Navigate to `/pay`. Click the sample prompt: *"Send $50 to John Kennedy on Base"*.
    - Watch the AI resolve John Kennedy's legal identity, map to Base EVM address, evaluate Treasury limits, and derive the NEAR Chain Signatures MPC signer.
 3. **Treasury Guardrails Hub**: Navigate to `/treasury`. Adjust auto-approval limits, inspect rolling velocity utilization, and review vendor trust scores.
